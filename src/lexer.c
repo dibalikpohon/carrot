@@ -151,6 +151,9 @@ void lexer_lex(Lexer *lexer) {
 		} else if (lexer->c == ')') {
 			lexer_add_token(lexer, create_token(T_RPAREN, ")"));
 			lexer_next(lexer);
+		} else if (lexer->c == ',') {
+			lexer_add_token(lexer, create_token(T_COMMA, ","));
+			lexer_next(lexer);
 		} else if (lexer->c == '-') {
 			// TODO: handle comment in a separate function
 			if (lexer->source[lexer->idx+1] == '-') {

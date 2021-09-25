@@ -10,13 +10,13 @@ typedef enum {
 	/* Identifier and keyword */
 	T_ID, T_KEYWORD,
 	/* Arithmetic */
-	T_PLUS, T_MINUS,
+	T_PLUS, T_MINUS, T_MULT, T_DIV,
 	/* Assignment */
 	T_EQUAL,
-	/* Misc */
-	T_EOF,
 	/* Parentheses, brackets, etc. */
 	T_LPAREN, T_RPAREN,
+	/* Misc */
+	T_COMMA, T_EOF,
 } tok_kind_t;
 
 typedef struct TOKEN {

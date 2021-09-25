@@ -29,12 +29,28 @@ char *read_source_file(char *filename) {
 	return source;
 }
 
-CarrotObj print(CarrotObj *args) {
-	printf("HELLO FROM BUILTIN FUNCTION\n");
+CarrotObj carrot_func_print(CarrotObj *args) {
+	int argc = carrot_get_args_len(args);
+	if (argc != 1) {
+		printf("print accepts exactly 1 arguments, but %d are passed.\n", argc);
+		exit(1);
+	}
+	char *s = carrot_get_repr(args[0]);
 
-	CarrotObj ob;
-	ob.type = N_NULL;
-	return ob;
+	printf("%s\n", s);
+
+	return carrot_null();
+}
+
+void carrot_register_builtin_func(char *name,
+		                  CarrotObj (*func)(CarrotObj *args),
+		                  Interpreter *interpreter) {
+	CarrotObj builtin_func;
+	builtin_func.type = N_FUNC_DEF;
+	builtin_func.builtin_func = func;
+	builtin_func.is_builtin = 1;
+	strcpy(builtin_func.func_name, name);
+	shput(interpreter->sym_table, name, builtin_func);
 }
 
 int main(int argc, char **argv) {
@@ -55,24 +71,25 @@ int main(int argc, char **argv) {
 		Interpreter interpreter = create_interpreter();
 
 		/* register builtin function */
-		CarrotObj print_func;
-		print_func.type = N_FUNC_DEF;
-		print_func.is_builtin = 1;
-		print_func.builtin_func = print;
-		strcpy(print_func.func_name, "print");
-		shput(interpreter.sym_table, "print", print_func);
+		carrot_register_builtin_func("print",
+				             &carrot_func_print,
+					     &interpreter);
 
 		interpreter_interpret(&interpreter, &n);
+		
 		// TODO: free sym_table
+		shfree(interpreter.sym_table);
 
+		// TODO: free object arglists, paramlists, etc
 		free_node(&n);
 
 		//printf("%d\n", n.statements[0].int_val);
-		printf("===================\n");
-		for (int i = 0; i < parser.lexer.token_cnt; i++) {
-			printf("%s\n", parser.lexer.tokens[i].text);
-		}
-		printf("===================\n");
+		//printf("===================\n");
+		//for (int i = 0; i < parser.lexer.token_cnt; i++) {
+		//	printf("%s: ", parser.lexer.tokens[i].text);
+		//	printf("%s\n", tok_kind_to_str(parser.lexer.tokens[i].tok_kind));
+		//}
+		//printf("===================\n");
 
 		parser_free(&parser);
 		free(source);

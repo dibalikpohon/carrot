@@ -12,15 +12,16 @@ typedef enum {
 	/* program entry point */
 	N_LIST,
 	/* literals */
-	N_INT_LITERAL, N_FLOAT_LITERAL, N_STR_LITERAL,
+	N_INT, N_FLOAT, N_STR,
 	/* statement */
 	N_STATEMENT, N_STATEMENTS,
-	N_VAR_DEF, N_FUNC_DEF, N_FUNC_CALL,
+	N_VAR_DEF, N_VAR_ACCESS, N_FUNC_DEF, N_FUNC_CALL,
 	N_NULL,
 } node_type_t;
 
 typedef struct CarrotObj_t {
 	node_type_t        type;
+	char               repr[MAX_STR_LITERAL_LEN];
 
 	/* value node */
 	int                int_val;
@@ -65,14 +66,28 @@ void parser_free(Parser *parser);
 void parser_init(Parser *parser, char *source);
 CarrotObj parser_parse(Parser *parser);
 Token parser_lookahed(Parser *parser);
-CarrotObj parser_parse_compound(Parser *parser);
+CarrotObj parser_parse_arith(Parser *parser);
+CarrotObj parser_parse_atom(Parser *parser);
+CarrotObj parser_parse_call(Parser *parser);
+CarrotObj parser_parse_comp(Parser *parser);
 CarrotObj parser_parse_expression(Parser *parser);
+CarrotObj parser_parse_factor(Parser *parser);
 CarrotObj parser_parse_identifier(Parser *parser);
 CarrotObj parser_parse_keyword(Parser *parser);
 CarrotObj parser_parse_literal(Parser *parser);
+CarrotObj parser_parse_power(Parser *parser);
 CarrotObj parser_parse_script(Parser *parser);
 CarrotObj parser_parse_statement(Parser *parser);
 CarrotObj parser_parse_statements(Parser *parser);
+CarrotObj parser_parse_term(Parser *parser);
 CarrotObj parser_parse_variable_def(Parser *parser);
+
+CarrotObj carrot_null();
+CarrotObj carrot_str(char *str_val);
+CarrotObj carrot_int(int int_val);
+
+
+int  carrot_get_args_len(CarrotObj *args);
+char *carrot_get_repr(CarrotObj obj);
 
 #endif

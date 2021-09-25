@@ -15,11 +15,12 @@ typedef struct INTERPRETER {
 
 Interpreter create_interpreter();
 
-void interpreter_init(Interpreter *interpreter, CarrotObj *node);
-void interpreter_interpret(Interpreter *interpreter, CarrotObj *node);
-void interpreter_visit(Interpreter *context, CarrotObj *node);
-void interpreter_visit_func_call(Interpreter *context, CarrotObj *node);
-void interpreter_visit_list(Interpreter *context, CarrotObj *node);
-void interpreter_visit_var_def(Interpreter *context, CarrotObj *node);
+CarrotObj interpreter_init(Interpreter *interpreter, CarrotObj *node);
+CarrotObj interpreter_interpret(Interpreter *interpreter, CarrotObj *node);
+CarrotObj interpreter_visit(Interpreter *context, CarrotObj *node);
+CarrotObj interpreter_visit_func_call(Interpreter *context, CarrotObj *node);
+CarrotObj interpreter_visit_list(Interpreter *context, CarrotObj *node);
+CarrotObj interpreter_visit_var_access(Interpreter *context, CarrotObj *node);
+CarrotObj interpreter_visit_var_def(Interpreter *context, CarrotObj *node);
 
 #endif

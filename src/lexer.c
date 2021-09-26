@@ -35,6 +35,9 @@ char *tok_kind_to_str(tok_kind_t kind) {
 		case T_EOF: return "T_EOF";
 		case T_LPAREN: return "T_LPAREN";
 		case T_RPAREN: return "T_RPAREN";
+		case T_MULT: return "T_MULT";
+		case T_DIV: return "T_DIV";
+		case T_COMMA: return "T_COMMA";
 	} 
 	return "T_UNKNOWN";
 }
@@ -161,7 +164,7 @@ void lexer_lex(Lexer *lexer) {
 					lexer_next(lexer);
 				}
 			}
-		}else {
+		} else {
 			lexer_next(lexer);
 		}
 

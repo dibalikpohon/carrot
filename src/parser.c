@@ -10,11 +10,19 @@
 
 void free_node(CarrotObj *node) {
 	if (node->type == N_LIST) {
-		int len = arrlen(node->list_items);
+		int len;
+
+		len = arrlen(node->list_items);
 		for (int i = 0; i < len; i++) {
 			free_node(&node->list_items[i]);
 		}
+
+		len = arrlen(node->interpreted_list_items);
+		for (int i = 0; i < len; i++) {
+			free_node(&node->interpreted_list_items[i]);
+		}
 		arrfree(node->list_items);
+		arrfree(node->interpreted_list_items);
 	}
 }
 
@@ -71,6 +79,9 @@ CarrotObj parser_parse_atom(Parser *parser) {
 		parser_consume(parser);
 		return obj;
 	}
+
+	printf("ERROR: literal or expression expected");
+	exit(1);
 }
 
 
@@ -115,9 +126,6 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 	 */
 	Token id_token = parser_consume(parser);
 	Token next_token = parser->current_token; //parser_consume(parser);
-	//printf("%s ", id_token.text);
-	//printf("%s ", next_token.text);
-	//exit(1);
 
 	if (strcmp(next_token.text, "as") == 0) {
 		parser_consume(parser);
@@ -136,6 +144,19 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 			CarrotObj n;
 			n.type = N_VAR_DEF;
 			strcpy(n.var_name, id_token.text);
+
+			// move these blocks inside parser_parse_variable_def
+			if (strcmp(data_type_token.text, "str") == 0) {
+				n.var_type = DT_STR;
+				strcpy(n.str_val, var_value_token.text);
+			} else if (strcmp(data_type_token.text, "int") == 0) {
+				n.var_type = DT_INT;
+				n.int_val = atoi(var_value_token.text);
+			} else if (strcmp(data_type_token.text, "float") == 0) {
+				n.var_type = DT_FLOAT;
+				n.float_val = atof(var_value_token.text);
+			}
+
 			return n;
 		} else {
 			/* Otherwise, just return the node
@@ -173,7 +194,6 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 			parser_consume(parser);
 		}
 
-
 		CarrotObj obj;
 		obj.type = N_FUNC_CALL;
 		obj.func_args = args;
@@ -195,7 +215,7 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 }
 
 CarrotObj parser_parse_keyword(Parser *parser) {
-	
+	exit(1);	
 }
 
 CarrotObj parser_parse_power(Parser *parser) {
@@ -218,23 +238,10 @@ CarrotObj parser_parse_script(Parser *parser) {
 }
 
 CarrotObj parser_parse_statement(Parser *parser) {
-	// Token t = parser->current_token;
-	// if (t.tok_kind == T_KEYWORD) {
-	// 	return parser_parse_keyword(parser);
-	// } else if (t.tok_kind == T_ID) {
-	// 	return parser_parse_identifier(parser);
-	// }
-
-	// CarrotObj n;
-	// n.type = N_STATEMENT;
-	// parser->nodes[parser->node_cnt++] = n;
-	//return n;
 	return parser_parse_expression(parser);
 }
 
 CarrotObj parser_parse_statements(Parser *parser){
-	//printf("%s\n", tok_kind_to_str(t.tok_kind));
-	//CarrotObj n;
 	CarrotObj *statements = NULL;
 
 	CarrotObj statement = parser_parse_statement(parser);
@@ -257,7 +264,12 @@ CarrotObj parser_parse_term(Parser *parser) {
 	return left;
 }
 
+CarrotObj parser_parse_value(Parser *parser) {
+	exit(1);
+}
+
 CarrotObj parser_parse_variable_def(Parser *parser) {
+	exit(1);
 }
 
 CarrotObj carrot_null() {
@@ -266,18 +278,29 @@ CarrotObj carrot_null() {
 	return obj;
 }
 
-CarrotObj str_obj(char *str_val) {
+CarrotObj carrot_float(float float_val) {
 	CarrotObj obj;
-	obj.type = N_STR;
-	strcpy(obj.str_val, str_val);
-	strcpy(obj.repr, str_val);
+	obj.type = N_VALUE;
+	obj.var_type = DT_FLOAT;
+	obj.float_val = float_val;
+	sprintf(obj.repr, "%f", float_val);
 	return obj;
 }
 
-CarrotObj int_obj(int int_val) {
+CarrotObj carrot_int(int int_val) {
 	CarrotObj obj;
-	obj.type = N_INT;
+	obj.type = N_VALUE;
+	obj.var_type = DT_INT;
 	obj.int_val = int_val;
+	sprintf(obj.repr, "%d", int_val);
+	return obj;
+}
+CarrotObj carrot_str(char *str_val) {
+	CarrotObj obj;
+	obj.type = N_VALUE;
+	obj.var_type = DT_STR;
+	strcpy(obj.str_val, str_val);
+	strcpy(obj.repr, str_val);
 	return obj;
 }
 
@@ -285,10 +308,10 @@ int  carrot_get_args_len(CarrotObj *args) {
 	return arrlen(args);
 }
 
-char *carrot_get_repr(CarrotObj obj) {
+void carrot_get_repr(CarrotObj obj, char *out) {
 	if (strcmp(obj.repr, "") == 0) {
 		printf("ERROR: unable to print representation");
-		return "";
+		exit(1);
 	}
-	return obj.repr;
+	strcpy(out, obj.repr);
 }

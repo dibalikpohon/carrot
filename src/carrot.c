@@ -32,10 +32,11 @@ char *read_source_file(char *filename) {
 CarrotObj carrot_func_print(CarrotObj *args) {
 	int argc = carrot_get_args_len(args);
 	if (argc != 1) {
-		printf("print accepts exactly 1 arguments, but %d are passed.\n", argc);
+		printf("ERROR: print accepts exactly 1 arguments, but %d are passed.\n", argc);
 		exit(1);
 	}
-	char *s = carrot_get_repr(args[0]);
+	char s[MAX_STR_LITERAL_LEN];
+	carrot_get_repr(args[0], s);
 
 	printf("%s\n", s);
 

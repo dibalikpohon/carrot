@@ -12,12 +12,17 @@ typedef enum {
 	/* program entry point */
 	N_LIST,
 	/* literals */
-	N_INT, N_FLOAT, N_STR,
+	N_VALUE, N_INT, N_FLOAT, N_STR,
 	/* statement */
 	N_STATEMENT, N_STATEMENTS,
 	N_VAR_DEF, N_VAR_ACCESS, N_FUNC_DEF, N_FUNC_CALL,
 	N_NULL,
 } node_type_t;
+
+
+typedef enum {
+	DT_STR, DT_INT, DT_FLOAT
+} data_type_t;
 
 typedef struct CarrotObj_t {
 	node_type_t        type;
@@ -34,10 +39,11 @@ typedef struct CarrotObj_t {
 
 	/* List node */
 	struct CarrotObj_t *list_items;
+	struct CarrotObj_t *interpreted_list_items;
 
 	/* variable definition node */
 	char               var_name[MAX_VAR_NAME_LEN];
-	char               *var_type;
+	data_type_t        var_type;
 	struct CarrotObj_t *var_value;
 
 	/* function definition node */
@@ -49,6 +55,7 @@ typedef struct CarrotObj_t {
 	/* function call node */
 	struct CarrotObj_t (*builtin_func)(struct CarrotObj_t *args);
 	struct CarrotObj_t *func_args;
+	struct CarrotObj_t *func_interpreted_args;
 	struct CarrotObj_t *func_return_value;
 } CarrotObj;
 
@@ -80,14 +87,16 @@ CarrotObj parser_parse_script(Parser *parser);
 CarrotObj parser_parse_statement(Parser *parser);
 CarrotObj parser_parse_statements(Parser *parser);
 CarrotObj parser_parse_term(Parser *parser);
+CarrotObj parser_parse_value(Parser *parser);
 CarrotObj parser_parse_variable_def(Parser *parser);
 
 CarrotObj carrot_null();
-CarrotObj carrot_str(char *str_val);
 CarrotObj carrot_int(int int_val);
+CarrotObj carrot_float(float float_val);
+CarrotObj carrot_str(char *str_val);
 
 
 int  carrot_get_args_len(CarrotObj *args);
-char *carrot_get_repr(CarrotObj obj);
+void carrot_get_repr(CarrotObj obj, char *out);
 
 #endif

@@ -10,7 +10,7 @@ Interpreter create_interpreter() {
 }
 
 CarrotObj interpreter_interpret(Interpreter *interpreter, CarrotObj *node) {
-	interpreter_visit(interpreter, node);
+	return interpreter_visit(interpreter, node);
 }
 
 CarrotObj interpreter_visit(Interpreter *context, CarrotObj *node) {
@@ -31,15 +31,28 @@ CarrotObj interpreter_visit_func_call(Interpreter *context, CarrotObj *node) {
 	char *func_name = node->func_name;
 	CarrotObj func_to_call = shget(context->sym_table, func_name);
 	if (func_to_call.is_builtin) {
-		func_to_call.builtin_func(node->func_args);
-	}
+		node->func_interpreted_args = NULL;
+		for (int i = 0; i < arrlen(node->func_args); i++) {
+			CarrotObj itprtd = interpreter_visit(context, &node->func_args[i]);
+			arrput(node->func_interpreted_args, itprtd);
+		}
+		func_to_call.builtin_func(node->func_interpreted_args);
+	} 
+
+	// printf("ERROR: func_call: unknown error sorry lol");
+	return carrot_null();
 }
 
 CarrotObj interpreter_visit_list(Interpreter *context, CarrotObj *node) {
 	int list_item_count = arrlen(node->list_items);
+	node->interpreted_list_items = NULL;
 	for (int i = 0; i < list_item_count; i++) {
-		interpreter_visit(context, &node->list_items[i]);
+		CarrotObj obj = interpreter_visit(context, &node->list_items[i]);
+		arrput(node->interpreted_list_items, obj);
 	}
+
+	// TODO: handle list type
+	return carrot_null();
 }
 
 CarrotObj interpreter_visit_var_access(Interpreter *context, CarrotObj *node) {
@@ -47,12 +60,25 @@ CarrotObj interpreter_visit_var_access(Interpreter *context, CarrotObj *node) {
 	int idx = shgeti(context->sym_table, var_name);
 	if (idx == -1) {
 		printf("Index: \"%d\" \n", idx);
-		printf("Error: \"%s\" is undefined.\n", var_name);
+		printf("ERROR: \"%s\" is undefined.\n", var_name);
+		exit(1);
 	}
+
+	return shget(context->sym_table, var_name);
 }
 
 CarrotObj interpreter_visit_var_def(Interpreter *context, CarrotObj *node) {
-	//printf("%s\n", node->var_name);
-	shput(context->sym_table, node->var_name, *node);
+	CarrotObj value_obj;
+	if (node->var_type == DT_STR) {
+		value_obj = carrot_str(node->str_val);
+	} else if (node->var_type == DT_INT) {
+		value_obj = carrot_int(node->int_val);
+	} else if (node->var_type == DT_FLOAT) {
+		value_obj = carrot_float(node->float_val);
+	} else {
+		printf("The data type for %s is not supported yet", node->var_name);
+		exit(1);
+	}
+	shput(context->sym_table, node->var_name, value_obj);
 	return carrot_null();
 }

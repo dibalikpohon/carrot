@@ -39,7 +39,7 @@ typedef struct Node_t {
 	/* reference to parent node and its corresponding
 	 * local symtable
 	 */
-	struct Node_t *parent;
+	struct Node_t      *parent;
 	Symtable           *sym_table;
 
 	/* value node */
@@ -50,11 +50,11 @@ typedef struct Node_t {
 	Token              value_token; // shared with variable definition node
 
 	/* statements node */
-	struct Node_t *statements;
+	struct Node_t      *statements;
 
 	/* List node */
-	struct Node_t *list_items;
-	struct Node_t *interpreted_list_items;
+	struct Node_t      *list_items;
+	struct Node_t      *interpreted_list_items;
 
 	/* variable definition node */
 	char               var_name[MAX_VAR_NAME_LEN];
@@ -64,13 +64,12 @@ typedef struct Node_t {
 	/* function definition node */
 	char               func_name[MAX_VAR_NAME_LEN];
 	int                is_builtin;
-	struct Node_t *func_params;
-	struct Node_t *func_body;
+	struct Node_t      *func_params;
+	struct Node_t      *func_body;
 
 	/* function call node */
-	struct Node_t (*builtin_func)(struct Node_t *args);
-	struct Node_t *func_args;
-	struct Node_t *func_return_value;
+	struct Node_t      *func_args;
+	struct Node_t      *func_return_value;
 } Node;
 
 typedef struct PARSER {

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "../include/logutils.h"
 #include "../include/interpreter.h"
 #include "../lib/include/stb_ds.h"
 
@@ -40,7 +41,12 @@ CarrotObj interpreter_visit_func_call(Interpreter *context, Node *node) {
 	char *func_name = node->func_name;
 	int idx = shgeti(context->sym_table, func_name);
 	if (idx == -1) {
-		printf("ERROR: function \"%s\" is undefined.\n", func_name);
+		char msg[255];
+		sprintf(msg,
+		        "Function \"%s\" is undefined. "
+			"Make sure you define the function before calling it.",
+			func_name);
+		carrot_log_error(msg);
 		exit(1);
 	}
 
@@ -96,7 +102,12 @@ CarrotObj interpreter_visit_var_access(Interpreter *context, Node *node) {
 	char *var_name = node->var_name;
 	int idx = shgeti(context->sym_table, var_name);
 	if (idx == -1) {
-		printf("ERROR: \"%s\" is undefined.\n", var_name);
+		char msg[255];
+		sprintf(msg,
+		        "You are trying to access variable \"%s\", while it is undefined. "
+			"Have you defined it before?",
+			var_name);
+		carrot_log_error(msg);
 		exit(1);
 	}
 

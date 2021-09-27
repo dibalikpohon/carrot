@@ -31,10 +31,6 @@ char *read_source_file(char *filename) {
 
 CarrotObj carrot_func_print(CarrotObj *args) {
 	int argc = arrlen(args);
-	if (argc < 1) {
-		printf("ERROR: Function 'print' accepts at least 1 argument");
-		exit(1);
-	}
 	for (int i = 0; i < argc; i++) {
 		printf("%s", args[i].repr);
 	}
@@ -95,6 +91,8 @@ int main(int argc, char **argv) {
 				             &carrot_func_type,
 					     &interpreter);
 
+		// TODO: perform type-checking
+		//
 		interpreter_interpret(&interpreter, &n);
 		
 		// TODO: free sym_table

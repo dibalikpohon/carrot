@@ -79,11 +79,12 @@ void make_number(Lexer *lexer) {
 
 	if (num_dot > 1) {
 		char msg[255];
-		snprintf(msg, 255, "in %s at line %d: Invalid number format: %s\n",
+		snprintf(msg, 255, "I saw an invalid number format in '%s' at line %d. "
+			 "You typed: %s\n",
 			 "foo",
 			 lexer->line_num,
 			 s);
-		cr_log_error(msg);
+		carrot_log_error(msg);
 		exit(1);
 	}
 

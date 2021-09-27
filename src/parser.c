@@ -83,7 +83,7 @@ Node parser_parse_atom(Parser *parser) {
 		return val_node;
 	}
 
-	printf("ERROR: literal or expression expected");
+	printf("ERROR: literal or expression expected\n");
 	exit(1);
 }
 

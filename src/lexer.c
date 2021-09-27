@@ -38,6 +38,7 @@ char *tok_kind_to_str(tok_kind_t kind) {
 		case T_MULT: return "T_MULT";
 		case T_DIV: return "T_DIV";
 		case T_COMMA: return "T_COMMA";
+		case T_UNKNOWN: return "T_UNKNOWN";
 	} 
 	return "T_UNKNOWN";
 }

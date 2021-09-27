@@ -16,7 +16,7 @@ typedef enum {
 	/* Parentheses, brackets, etc. */
 	T_LPAREN, T_RPAREN,
 	/* Misc */
-	T_COMMA, T_EOF,
+	T_COMMA, T_EOF, T_UNKNOWN,
 } tok_kind_t;
 
 typedef struct TOKEN {

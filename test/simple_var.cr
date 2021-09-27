@@ -1,3 +1,6 @@
+-- Literals
+println("Purple parrot eating carrot ", 123, " ", 1.23)
+
 -- An example of variable
 name as str = "John"
 println(name)

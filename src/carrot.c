@@ -30,15 +30,13 @@ char *read_source_file(char *filename) {
 }
 
 CarrotObj carrot_func_print(CarrotObj *args) {
-	int argc = carrot_get_args_len(args);
+	int argc = arrlen(args);
 	if (argc < 1) {
 		printf("ERROR: Function 'print' accepts at least 1 argument");
 		exit(1);
 	}
 	for (int i = 0; i < argc; i++) {
-		char s[MAX_STR_LITERAL_LEN];
-		carrot_get_repr(args[i], s);
-		printf("%s", s);
+		printf("%s", args[i].repr);
 	}
 
 	return carrot_null();
@@ -50,19 +48,19 @@ CarrotObj carrot_func_println(CarrotObj *args) {
 }
 
 CarrotObj carrot_func_type(CarrotObj *args) {
-	int argc = carrot_get_args_len(args);
+	int argc = arrlen(args);
 	if (argc != 1) {
 		printf("ERROR: Function 'type' accepts exactly 1 arguments, but %d are passed.\n", argc);
 		exit(1);
 	}
-	return carrot_str(args[0].var_type_str);
+	return carrot_str(args[0].type_str);
 }
 
 void carrot_register_builtin_func(char *name,
 		                  CarrotObj (*func)(CarrotObj *args),
 		                  Interpreter *interpreter) {
 	CarrotObj builtin_func;
-	builtin_func.type = N_FUNC_DEF;
+	builtin_func.type = CARROT_FUNCTION;
 	builtin_func.builtin_func = func;
 	builtin_func.is_builtin = 1;
 	strcpy(builtin_func.func_name, name);
@@ -82,7 +80,7 @@ int main(int argc, char **argv) {
 	if (source) {
 		Parser parser;
 		parser_init(&parser, source);
-		CarrotObj n = parser_parse(&parser);
+		Node n = parser_parse(&parser);
 		
 		Interpreter interpreter = create_interpreter();
 
@@ -104,14 +102,6 @@ int main(int argc, char **argv) {
 
 		// TODO: free object arglists, paramlists, etc
 		free_node(&n);
-
-		//printf("%d\n", n.statements[0].int_val);
-		//printf("===================\n");
-		//for (int i = 0; i < parser.lexer.token_cnt; i++) {
-		//	printf("%s: ", parser.lexer.tokens[i].text);
-		//	printf("%s\n", tok_kind_to_str(parser.lexer.tokens[i].tok_kind));
-		//}
-		//printf("===================\n");
 
 		parser_free(&parser);
 		free(source);

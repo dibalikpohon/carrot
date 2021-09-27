@@ -8,7 +8,7 @@
 #define STB_DS_IMPLEMENTATION
 #include "../lib/include/stb_ds.h"
 
-void free_node(CarrotObj *node) {
+void free_node(Node *node) {
 	if (node->type == N_LIST) {
 		int len;
 
@@ -55,12 +55,12 @@ void parser_free(Parser *parser) {
 	}
 }
 
-CarrotObj parser_parse(Parser *parser) {
+Node parser_parse(Parser *parser) {
 	return parser_parse_script(parser);
 }
 
-CarrotObj parser_parse_arith(Parser *parser) {
-	CarrotObj left = parser_parse_term(parser);
+Node parser_parse_arith(Parser *parser) {
+	Node left = parser_parse_term(parser);
 
 	while (parser->current_token.tok_kind == T_PLUS) {
 	}
@@ -68,17 +68,19 @@ CarrotObj parser_parse_arith(Parser *parser) {
 	return left;
 }
 
-CarrotObj parser_parse_atom(Parser *parser) {
+Node parser_parse_atom(Parser *parser) {
 	Token tok = parser->current_token;
 
 	if (tok.tok_kind == T_ID) {
 		return parser_parse_identifier(parser);
-	} else if (tok.tok_kind == T_STR) {
-		//CarrotObj obj;
-		//obj.type = N_STR;
-		//strcpy(obj.repr, tok.text);
+	} else if (tok.tok_kind == T_STR ||
+		   tok.tok_kind == T_INT ||
+		   tok.tok_kind == T_FLOAT) {
+		Node val_node;
+		val_node.type = N_LITERAL;
+		val_node.value_token = tok;
 		parser_consume(parser);
-		return carrot_str(tok.text);
+		return val_node;
 	}
 
 	printf("ERROR: literal or expression expected");
@@ -86,19 +88,19 @@ CarrotObj parser_parse_atom(Parser *parser) {
 }
 
 
-CarrotObj parser_parse_call(Parser *parser) {
-	CarrotObj atom = parser_parse_atom(parser);
+Node parser_parse_call(Parser *parser) {
+	Node atom = parser_parse_atom(parser);
 	if (parser->current_token.tok_kind == T_LPAREN) {
 	}
 	return atom;
 }
 
-CarrotObj parser_parse_com(Parser *parser) {
+Node parser_parse_com(Parser *parser) {
 	// 1) parse NOT
 	// ...
 
 	// left term
-	CarrotObj left = parser_parse_arith(parser);
+	Node left = parser_parse_arith(parser);
 
 	// 2) parse ==, >, <, >=, <=
 	// ...
@@ -106,20 +108,20 @@ CarrotObj parser_parse_com(Parser *parser) {
 	return left;
 }
 
-CarrotObj parser_parse_expression(Parser *parser) {
-	CarrotObj left = parser_parse_com(parser);
+Node parser_parse_expression(Parser *parser) {
+	Node left = parser_parse_com(parser);
 
 	/* and, or, ... */
 
 	return left;
 }
 
-CarrotObj parser_parse_factor(Parser *parser) {
-	CarrotObj left = parser_parse_power(parser);
+Node parser_parse_factor(Parser *parser) {
+	Node left = parser_parse_power(parser);
 	return left;
 }
 
-CarrotObj parser_parse_identifier(Parser *parser) {
+Node parser_parse_identifier(Parser *parser) {
 	/* 3 possibilities:
 	 * - variable declaration with dtype
 	 * - variable declaration
@@ -151,6 +153,7 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 		} else {
 			/* Otherwise, just return the node */
 			Token var_value_token; // dummy var_value
+			var_value_token.tok_kind = T_UNKNOWN;
 			return parser_parse_variable_def(parser, 
 							 id_token,
 					                 data_type_token.text,
@@ -162,18 +165,18 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 		parser_consume(parser);
 		/* Handle function call */
 
-		CarrotObj *args = NULL;
+		Node *args = NULL;
 
 		if (parser->current_token.tok_kind == T_RPAREN) {
 			// handle call without args
 			parser_consume(parser);
 		} else {
 			// handle call with args
-			CarrotObj arg = parser_parse_expression(parser);
+			Node arg = parser_parse_expression(parser);
 			arrput(args, arg);
 			while (parser->current_token.tok_kind == T_COMMA) {
 				parser_consume(parser);
-				CarrotObj arg = parser_parse_expression(parser);
+				Node arg = parser_parse_expression(parser);
 				arrput(args, arg);
 			}
 			if (parser->current_token.tok_kind != T_RPAREN) {
@@ -184,7 +187,7 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 			parser_consume(parser);
 		}
 
-		CarrotObj obj;
+		Node obj;
 		obj.type = N_FUNC_CALL;
 		obj.func_args = args;
 		strcpy(obj.func_name, id_token.text);
@@ -193,7 +196,7 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 		/* Handle assignment */
 	} else {
 		/* Handle variable access */
-		CarrotObj obj;
+		Node obj;
 		obj.type = N_VAR_ACCESS;
 		strcpy(obj.var_name, id_token.text);
 		return obj;
@@ -204,40 +207,40 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 	exit(1);
 }
 
-CarrotObj parser_parse_keyword(Parser *parser) {
+Node parser_parse_keyword(Parser *parser) {
 	exit(1);	
 }
 
-CarrotObj parser_parse_power(Parser *parser) {
-	CarrotObj left = parser_parse_call(parser);
+Node parser_parse_power(Parser *parser) {
+	Node left = parser_parse_call(parser);
 
 	return left;
 }
 
-CarrotObj parser_parse_script(Parser *parser) {
-	CarrotObj *statements = NULL;
+Node parser_parse_script(Parser *parser) {
+	Node *statements = NULL;
 	while (parser->current_token.tok_kind != T_EOF) {
-		CarrotObj stmt = parser_parse_statement(parser);
+		Node stmt = parser_parse_statement(parser);
 		arrput(statements, stmt);
 	}
 
-	CarrotObj list_node;
+	Node list_node;
 	list_node.type = N_LIST;
 	list_node.list_items = statements;
 	return list_node;
 }
 
-CarrotObj parser_parse_statement(Parser *parser) {
+Node parser_parse_statement(Parser *parser) {
 	return parser_parse_expression(parser);
 }
 
-CarrotObj parser_parse_statements(Parser *parser){
-	CarrotObj *statements = NULL;
+Node parser_parse_statements(Parser *parser){
+	Node *statements = NULL;
 
-	CarrotObj statement = parser_parse_statement(parser);
+	Node statement = parser_parse_statement(parser);
 	arrput(statements, statement);
 
-	CarrotObj n;
+	Node n;
 	n.statements = statements;
 	n.type = N_STATEMENTS;
 	parser->nodes[parser->node_cnt++] = n;
@@ -245,8 +248,8 @@ CarrotObj parser_parse_statements(Parser *parser){
 	return n;
 }
 
-CarrotObj parser_parse_term(Parser *parser) {
-	CarrotObj left = parser_parse_factor(parser);
+Node parser_parse_term(Parser *parser) {
+	Node left = parser_parse_factor(parser);
 
 	while (parser->current_token.tok_kind == T_MULT) {
 	}
@@ -254,16 +257,16 @@ CarrotObj parser_parse_term(Parser *parser) {
 	return left;
 }
 
-CarrotObj parser_parse_value(Parser *parser) {
+Node parser_parse_value(Parser *parser) {
 	exit(1);
 }
 
-CarrotObj parser_parse_variable_def(Parser *parser,
+Node parser_parse_variable_def(Parser *parser,
 		                    Token id_token,
 		                    char *var_type_str, 
 				    Token var_value_token,
 				    int initialized) {
-	CarrotObj obj;
+	Node obj;
 	obj.type = N_VAR_DEF;
 	strcpy(obj.var_name, id_token.text);
 	
@@ -300,49 +303,8 @@ CarrotObj parser_parse_variable_def(Parser *parser,
 	return obj;
 }
 
-CarrotObj carrot_null() {
-	CarrotObj obj;
-	obj.type = N_VALUE;
-	strcpy(obj.var_type_str, "null");
-	strcpy(obj.repr, "null");
-	return obj;
-}
-
-CarrotObj carrot_float(float float_val) {
-	CarrotObj obj;
-	obj.type = N_VALUE;
-	obj.var_type = DT_FLOAT;
-	obj.float_val = float_val;
-	strcpy(obj.var_type_str, "float");
-	sprintf(obj.repr, "%f", float_val);
-	return obj;
-}
-
-CarrotObj carrot_int(int int_val) {
-	CarrotObj obj;
-	obj.type = N_VALUE;
-	obj.var_type = DT_INT;
-	obj.int_val = int_val;
-	strcpy(obj.var_type_str, "int");
-	sprintf(obj.repr, "%d", int_val);
-	return obj;
-}
-CarrotObj carrot_str(char *str_val) {
-	CarrotObj obj;
-	obj.type = N_VALUE;
-	obj.var_type = DT_STR;
-	strcpy(obj.var_type_str, "str");
-	strcpy(obj.str_val, str_val);
-	sprintf(obj.repr, "%s", str_val);
-	return obj;
-}
-
-int  carrot_get_args_len(CarrotObj *args) {
+int  carrot_get_args_len(Node *args) {
 	return arrlen(args);
-}
-
-void carrot_get_repr(CarrotObj obj, char *out) {
-	strcpy(out, obj.repr);
 }
 
 #define string_equals(a, b) (strcmp(a, b) == 0)

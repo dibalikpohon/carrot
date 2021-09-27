@@ -31,16 +31,31 @@ char *read_source_file(char *filename) {
 
 CarrotObj carrot_func_print(CarrotObj *args) {
 	int argc = carrot_get_args_len(args);
-	if (argc != 1) {
-		printf("ERROR: print accepts exactly 1 arguments, but %d are passed.\n", argc);
+	if (argc < 1) {
+		printf("ERROR: Function 'print' accepts at least 1 argument");
 		exit(1);
 	}
-	char s[MAX_STR_LITERAL_LEN];
-	carrot_get_repr(args[0], s);
-
-	printf("%s\n", s);
+	for (int i = 0; i < argc; i++) {
+		char s[MAX_STR_LITERAL_LEN];
+		carrot_get_repr(args[i], s);
+		printf("%s", s);
+	}
 
 	return carrot_null();
+}
+
+CarrotObj carrot_func_println(CarrotObj *args) {
+	arrput(args, carrot_str("\n"));
+	return carrot_func_print(args);
+}
+
+CarrotObj carrot_func_type(CarrotObj *args) {
+	int argc = carrot_get_args_len(args);
+	if (argc != 1) {
+		printf("ERROR: Function 'type' accepts exactly 1 arguments, but %d are passed.\n", argc);
+		exit(1);
+	}
+	return carrot_str(args[0].var_type_str);
 }
 
 void carrot_register_builtin_func(char *name,
@@ -74,6 +89,12 @@ int main(int argc, char **argv) {
 		/* register builtin function */
 		carrot_register_builtin_func("print",
 				             &carrot_func_print,
+					     &interpreter);
+		carrot_register_builtin_func("println",
+				             &carrot_func_println,
+					     &interpreter);
+		carrot_register_builtin_func("type",
+				             &carrot_func_type,
 					     &interpreter);
 
 		interpreter_interpret(&interpreter, &n);

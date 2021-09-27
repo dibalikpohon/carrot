@@ -23,12 +23,19 @@ CarrotObj interpreter_visit(Interpreter *context, CarrotObj *node) {
 			return interpreter_visit_var_def(context, node);
 		case N_VAR_ACCESS:
 			return interpreter_visit_var_access(context, node);
+		case N_VALUE:
+			return *node;
 		default: exit(1);
 	}
 }
 
 CarrotObj interpreter_visit_func_call(Interpreter *context, CarrotObj *node) {
 	char *func_name = node->func_name;
+	int idx = shgeti(context->sym_table, func_name);
+	if (idx == -1) {
+		printf("ERROR: function \"%s\" is undefined.\n", func_name);
+		exit(1);
+	}
 	CarrotObj func_to_call = shget(context->sym_table, func_name);
 	if (func_to_call.is_builtin) {
 		node->func_interpreted_args = NULL;
@@ -36,7 +43,7 @@ CarrotObj interpreter_visit_func_call(Interpreter *context, CarrotObj *node) {
 			CarrotObj itprtd = interpreter_visit(context, &node->func_args[i]);
 			arrput(node->func_interpreted_args, itprtd);
 		}
-		func_to_call.builtin_func(node->func_interpreted_args);
+		return func_to_call.builtin_func(node->func_interpreted_args);
 	} 
 
 	// printf("ERROR: func_call: unknown error sorry lol");
@@ -59,7 +66,6 @@ CarrotObj interpreter_visit_var_access(Interpreter *context, CarrotObj *node) {
 	char *var_name = node->var_name;
 	int idx = shgeti(context->sym_table, var_name);
 	if (idx == -1) {
-		printf("Index: \"%d\" \n", idx);
 		printf("ERROR: \"%s\" is undefined.\n", var_name);
 		exit(1);
 	}
@@ -75,6 +81,8 @@ CarrotObj interpreter_visit_var_def(Interpreter *context, CarrotObj *node) {
 		value_obj = carrot_int(node->int_val);
 	} else if (node->var_type == DT_FLOAT) {
 		value_obj = carrot_float(node->float_val);
+	} else if (node->var_type == DT_NULL) {
+		value_obj = carrot_null();
 	} else {
 		printf("The data type for %s is not supported yet", node->var_name);
 		exit(1);

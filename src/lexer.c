@@ -166,7 +166,7 @@ void lexer_lex(Lexer *lexer) {
 			make_single_char_token(lexer, T_RPAREN, ")");
 		} else if (lexer->c == ',') {
 			make_single_char_token(lexer, T_COMMA, ",");
-		} else if (lexer-> == '+') {
+		} else if (lexer->c == '+') {
 			make_single_char_token(lexer, T_PLUS, "+");
 		} else if (lexer->c == '-') {
 			if (lexer->source[lexer->idx+1] == '-') {

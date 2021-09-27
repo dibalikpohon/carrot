@@ -1,20 +1,23 @@
----------------------------
--- an example of variable
----------------------------
+-- An example of variable
 name as str = "John"
-print(name)
+println(name)
 
----------------------------
--- uninitialized variable
----------------------------
+-- You can get the type of variable using type() function
+println("type of name: ", type(name))
+
+-- Uninitialized variable
 age as int
-print(age) -- should return 0
+println(age) -- should print 0
 
----------------------------
--- other variables
----------------------------
-pi as float = 3.13
+-- Another variable
+pi as float = 3.14
+println(pi)
 
--- carrot performs type inference if we specfy "any" as the data type
+-- Carrot performs type inference if we specfy "any" as the data type
 some_object as any = 123
-print(some_object)
+println(some_object)
+
+-- However, unitialized variable without initialization will be null-valued
+another_object as any
+println(another_object)
+

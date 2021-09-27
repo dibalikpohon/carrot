@@ -7,6 +7,9 @@
 #define MAX_STR_LITERAL_LEN 512
 #define MAX_STATEMENT_NUM   2048
 #define MAX_VAR_NAME_LEN    255
+#define MAX_VAR_TYPE_LEN    255
+
+typedef struct CarrotObj_t CarrotObj;
 
 typedef enum {
 	/* program entry point */
@@ -21,12 +24,24 @@ typedef enum {
 
 
 typedef enum {
-	DT_STR, DT_INT, DT_FLOAT
+	DT_STR, DT_INT, DT_FLOAT, DT_NULL
 } data_type_t;
+
+
+typedef struct Symtable_t {
+	char               *key;
+	struct CarrotObj_t *value;
+} Symtable;
 
 typedef struct CarrotObj_t {
 	node_type_t        type;
 	char               repr[MAX_STR_LITERAL_LEN];
+
+	/* reference to parent node and its corresponding
+	 * local symtable
+	 */
+	struct CarrotObj_t *parent;
+	Symtable           *sym_table;
 
 	/* value node */
 	int                int_val;
@@ -44,7 +59,8 @@ typedef struct CarrotObj_t {
 	/* variable definition node */
 	char               var_name[MAX_VAR_NAME_LEN];
 	data_type_t        var_type;
-	struct CarrotObj_t *var_value;
+	char               var_type_str[MAX_VAR_TYPE_LEN];
+	struct CarrotObj_t *var_value; // shared with value node
 
 	/* function definition node */
 	char               func_name[MAX_VAR_NAME_LEN];
@@ -71,8 +87,8 @@ void free_node(CarrotObj *node);
 Token parser_consume(Parser *parser);
 void parser_free(Parser *parser);
 void parser_init(Parser *parser, char *source);
-CarrotObj parser_parse(Parser *parser);
 Token parser_lookahed(Parser *parser);
+CarrotObj parser_parse(Parser *parser);
 CarrotObj parser_parse_arith(Parser *parser);
 CarrotObj parser_parse_atom(Parser *parser);
 CarrotObj parser_parse_call(Parser *parser);
@@ -90,7 +106,7 @@ CarrotObj parser_parse_term(Parser *parser);
 CarrotObj parser_parse_value(Parser *parser);
 CarrotObj parser_parse_variable_def(Parser *parser,
 		                    Token id_token,
-		                    Token data_type_token, 
+		                    char *var_type_str, 
 				    Token var_value_token,
 				    int initialized);
 

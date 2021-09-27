@@ -141,31 +141,20 @@ CarrotObj parser_parse_identifier(Parser *parser) {
 			parser_consume(parser);
 			Token var_value_token = parser_consume(parser);
 
-			CarrotObj n;
-			n.type = N_VAR_DEF;
-			strcpy(n.var_name, id_token.text);
+			return parser_parse_variable_def(parser, 
+							 id_token,
+					                 data_type_token,
+							 var_value_token,
+							 1);
 
-			// move these blocks inside parser_parse_variable_def
-			if (strcmp(data_type_token.text, "str") == 0) {
-				n.var_type = DT_STR;
-				strcpy(n.str_val, var_value_token.text);
-			} else if (strcmp(data_type_token.text, "int") == 0) {
-				n.var_type = DT_INT;
-				n.int_val = atoi(var_value_token.text);
-			} else if (strcmp(data_type_token.text, "float") == 0) {
-				n.var_type = DT_FLOAT;
-				n.float_val = atof(var_value_token.text);
-			}
-
-			return n;
 		} else {
-			/* Otherwise, just return the node
-			 * TODO: default value based on the type
-			 */
-			CarrotObj n;
-			n.type = N_VAR_DEF;
-			strcpy(n.var_name, id_token.text);
-			return n;
+			/* Otherwise, just return the node */
+			Token var_value_token; // dummy var_value
+			return parser_parse_variable_def(parser, 
+							 id_token,
+					                 data_type_token,
+							 var_value_token,
+							 0);
 		}
 
 	} else if (next_token.tok_kind == T_LPAREN) {
@@ -268,8 +257,29 @@ CarrotObj parser_parse_value(Parser *parser) {
 	exit(1);
 }
 
-CarrotObj parser_parse_variable_def(Parser *parser) {
-	exit(1);
+CarrotObj parser_parse_variable_def(Parser *parser,
+		                    Token id_token,
+		                    Token data_type_token, 
+				    Token var_value_token,
+				    int initialized) {
+	CarrotObj obj;
+	obj.type = N_VAR_DEF;
+	strcpy(obj.var_name, id_token.text);
+	
+	if (strcmp(data_type_token.text, "str") == 0) {
+		obj.var_type = DT_STR;
+		if (initialized) strcpy(obj.str_val, var_value_token.text);
+		else strcpy(obj.str_val, "");
+	} else if (strcmp(data_type_token.text, "int") == 0) {
+		obj.var_type = DT_INT;
+		if (initialized) obj.int_val = atoi(var_value_token.text);
+		else obj.int_val = 0;
+	} else if (strcmp(data_type_token.text, "float") == 0) {
+		obj.var_type = DT_FLOAT;
+		if (initialized) obj.float_val = atof(var_value_token.text);
+		else obj.float_val = 0.0;
+	}
+	return obj;
 }
 
 CarrotObj carrot_null() {
@@ -309,9 +319,28 @@ int  carrot_get_args_len(CarrotObj *args) {
 }
 
 void carrot_get_repr(CarrotObj obj, char *out) {
-	if (strcmp(obj.repr, "") == 0) {
-		printf("ERROR: unable to print representation");
-		exit(1);
-	}
 	strcpy(out, obj.repr);
+}
+
+#define string_equals(a, b) (strcmp(a, b) == 0)
+void carrot_type_check(tok_kind_t token_kind, char *data_type_str) {
+	// check builtin type
+	if (string_equals("str", data_type_str)) {
+		if (token_kind != T_STR) {
+			printf("ERROR: expected string value\n");
+			exit(1);
+		}
+	} 
+	if (string_equals("int", data_type_str)) {
+		if (token_kind != T_INT) {
+			printf("ERROR: expected int value\n");
+			exit(1);
+		}
+	} 
+	if (string_equals("float", data_type_str)) {
+		if (token_kind != T_FLOAT) {
+			printf("ERROR: expected float value\n");
+			exit(1);
+		}
+	} 
 }

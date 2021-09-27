@@ -88,15 +88,20 @@ CarrotObj parser_parse_statement(Parser *parser);
 CarrotObj parser_parse_statements(Parser *parser);
 CarrotObj parser_parse_term(Parser *parser);
 CarrotObj parser_parse_value(Parser *parser);
-CarrotObj parser_parse_variable_def(Parser *parser);
+CarrotObj parser_parse_variable_def(Parser *parser,
+		                    Token id_token,
+		                    Token data_type_token, 
+				    Token var_value_token,
+				    int initialized);
 
 CarrotObj carrot_null();
 CarrotObj carrot_int(int int_val);
 CarrotObj carrot_float(float float_val);
 CarrotObj carrot_str(char *str_val);
 
-
 int  carrot_get_args_len(CarrotObj *args);
 void carrot_get_repr(CarrotObj obj, char *out);
+
+void carrot_type_check(tok_kind_t token_kind, char *data_type_str);
 
 #endif

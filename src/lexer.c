@@ -93,6 +93,11 @@ void make_number(Lexer *lexer) {
 	}
 }
 
+void make_single_char_token(Lexer *lexer, tok_kind_t kind, char *text) {
+	lexer_add_token(lexer, create_token(kind, text));
+	lexer_next(lexer);
+}
+
 void make_string(Lexer *lexer) {
 	lexer_next(lexer);
 	char s[MAX_TOKEN_TEXT_LEN] = "";
@@ -125,6 +130,14 @@ void lexer_next(Lexer *lexer) {
 	lexer->c = lexer->source[++lexer->idx];
 }
 
+void lexer_skip_comment(Lexer *lexer) {
+	if (lexer->source[lexer->idx+1] == '-') {
+		while (lexer->c != '\n') {
+			lexer_next(lexer);
+		}
+	}
+}
+
 void lexer_skip_whitespace(Lexer *lexer) {
 	while (isspace(lexer->c)) {
 		if (lexer->c == '\n') lexer->line_num++;
@@ -146,23 +159,20 @@ void lexer_lex(Lexer *lexer) {
 		} else if (lexer->c == '"') {
 			make_string(lexer);
 		} else if (lexer->c == '=') {
-			lexer_add_token(lexer, create_token(T_EQUAL, "="));
-			lexer_next(lexer);
+			make_single_char_token(lexer, T_EQUAL, "=");
 		} else if (lexer->c == '(') {
-			lexer_add_token(lexer, create_token(T_LPAREN, "("));
-			lexer_next(lexer);
+			make_single_char_token(lexer, T_LPAREN, "(");
 		} else if (lexer->c == ')') {
-			lexer_add_token(lexer, create_token(T_RPAREN, ")"));
-			lexer_next(lexer);
+			make_single_char_token(lexer, T_RPAREN, ")");
 		} else if (lexer->c == ',') {
-			lexer_add_token(lexer, create_token(T_COMMA, ","));
-			lexer_next(lexer);
+			make_single_char_token(lexer, T_COMMA, ",");
+		} else if (lexer-> == '+') {
+			make_single_char_token(lexer, T_PLUS, "+");
 		} else if (lexer->c == '-') {
-			// TODO: handle comment in a separate function
 			if (lexer->source[lexer->idx+1] == '-') {
-				while (lexer->c != '\n') {
-					lexer_next(lexer);
-				}
+				lexer_skip_comment(lexer);
+			} else {
+				make_single_char_token(lexer, T_MINUS, "-");
 			}
 		} else {
 			lexer_next(lexer);

@@ -43,11 +43,13 @@ char *tok_kind_to_str(tok_kind_t kind);
 Token create_token(tok_kind_t tok_kind, char *text);
 void make_identifier(Lexer *lexer);
 void make_number(Lexer *lexer);
+void make_single_char_token(Lexer *lexer, tok_kind_t kind, char *text);
 void make_string(Lexer *lexer);
 
 void lexer_add_token(Lexer *lexer, Token t);
 void lexer_init(Lexer *lexer, char *filename);
 void lexer_next(Lexer *lexer);
+void lexer_skip_comment(Lexer *lexer);
 void lexer_skip_whitespace(Lexer *lexer);
 
 void lexer_lex(Lexer *lexer);

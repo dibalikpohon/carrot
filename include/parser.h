@@ -12,8 +12,6 @@
 typedef struct Node_t Node;
 
 typedef enum {
-	/* program entry point */
-	N_LIST,
 	/* literals */
 	N_LITERAL, 
 	/* statement */
@@ -23,7 +21,7 @@ typedef enum {
 } node_type_t;
 
 typedef enum {
-	DT_STR, DT_INT, DT_FLOAT, DT_NULL
+	DT_STR, DT_INT, DT_FLOAT, DT_LIST, DT_NULL
 } data_type_t;
 
 
@@ -35,12 +33,6 @@ typedef struct Symtable_t {
 typedef struct Node_t {
 	node_type_t        type;
 	char               repr[MAX_STR_LITERAL_LEN];
-
-	/* reference to parent node and its corresponding
-	 * local symtable
-	 */
-	struct Node_t      *parent;
-	Symtable           *sym_table;
 
 	/* value node */
 	int                int_val;
@@ -54,7 +46,7 @@ typedef struct Node_t {
 
 	/* List node */
 	struct Node_t      *list_items;
-	struct Node_t      *interpreted_list_items;
+	//struct Node_t      *interpreted_list_items;
 
 	/* variable definition node */
 	char               var_name[MAX_VAR_NAME_LEN];
@@ -94,6 +86,7 @@ Node parser_parse_expression(Parser *parser);
 Node parser_parse_factor(Parser *parser);
 Node parser_parse_identifier(Parser *parser);
 Node parser_parse_keyword(Parser *parser);
+Node parser_parse_list(Parser *parser);
 Node parser_parse_literal(Parser *parser);
 Node parser_parse_power(Parser *parser);
 Node parser_parse_script(Parser *parser);

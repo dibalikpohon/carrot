@@ -35,6 +35,8 @@ char *tok_kind_to_str(tok_kind_t kind) {
 		case T_EOF: return "T_EOF";
 		case T_LPAREN: return "T_LPAREN";
 		case T_RPAREN: return "T_RPAREN";
+		case T_LBRACKET: return "T_LBRACKET";
+		case T_RBRACKET: return "T_RBRACKET";
 		case T_MULT: return "T_MULT";
 		case T_DIV: return "T_DIV";
 		case T_COMMA: return "T_COMMA";
@@ -129,7 +131,8 @@ void lexer_init(Lexer *lexer, char *source) {
 }
 
 void lexer_next(Lexer *lexer) {
-	lexer->c = lexer->source[++lexer->idx];
+	if (lexer->c != '\0')
+		lexer->c = lexer->source[++lexer->idx];
 }
 
 void lexer_skip_comment(Lexer *lexer) {
@@ -166,6 +169,10 @@ void lexer_lex(Lexer *lexer) {
 			make_single_char_token(lexer, T_LPAREN, "(");
 		} else if (lexer->c == ')') {
 			make_single_char_token(lexer, T_RPAREN, ")");
+		} else if (lexer->c == '[') {
+			make_single_char_token(lexer, T_LBRACKET, "[");
+		} else if (lexer->c == ']') {
+			make_single_char_token(lexer, T_RBRACKET, "]");
 		} else if (lexer->c == ',') {
 			make_single_char_token(lexer, T_COMMA, ",");
 		} else if (lexer->c == '+') {

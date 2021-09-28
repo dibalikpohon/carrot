@@ -1,0 +1,1 @@
+clear && ./build.sh && valgrind --leak-check=full  --track-origins=yes --trace-children=yes --max-stackframe=10000000 ./carrot.out test/simple_var.cr

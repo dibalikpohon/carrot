@@ -15,6 +15,7 @@ typedef enum {
 	T_EQUAL,
 	/* Parentheses, brackets, etc. */
 	T_LPAREN, T_RPAREN,
+	T_LBRACKET, T_RBRACKET,
 	/* Misc */
 	T_COMMA, T_EOF, T_UNKNOWN,
 } tok_kind_t;

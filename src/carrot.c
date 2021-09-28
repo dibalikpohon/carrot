@@ -20,7 +20,7 @@ char *read_source_file(char *filename) {
 	int size = ftell(file);
 	fseek(file, 0, SEEK_SET);
 
-	source = (char*) malloc(sizeof(char) * (size + 1));
+	source = (char*) calloc(1, sizeof(char) * (size + 1));
 	fread(source, 1, size, file);
 	source[size] = '\0';
 
@@ -34,13 +34,16 @@ CarrotObj carrot_func_print(CarrotObj *args) {
 	for (int i = 0; i < argc; i++) {
 		printf("%s", args[i].repr);
 	}
-
 	return carrot_null();
 }
 
 CarrotObj carrot_func_println(CarrotObj *args) {
-	arrput(args, carrot_str("\n"));
-	return carrot_func_print(args);
+	int argc = arrlen(args);
+	for (int i = 0; i < argc; i++) {
+		printf("%s", args[i].repr);
+	}
+	printf("\n");
+	return carrot_null();
 }
 
 CarrotObj carrot_func_type(CarrotObj *args) {
@@ -78,6 +81,14 @@ int main(int argc, char **argv) {
 		parser_init(&parser, source);
 		Node n = parser_parse(&parser);
 		
+		// ..........................
+		// TODO: perform typechecking
+		//...........................
+		//
+		//  carrot_typecheck(&n);
+		//...........................
+
+
 		Interpreter interpreter = create_interpreter();
 
 		/* register builtin function */
@@ -91,17 +102,12 @@ int main(int argc, char **argv) {
 				             &carrot_func_type,
 					     &interpreter);
 
-		// TODO: perform type-checking
-		//
-		interpreter_interpret(&interpreter, &n);
-		
-		// TODO: free sym_table
-		shfree(interpreter.sym_table);
+		CarrotObj result = interpreter_interpret(&interpreter, &n);
 
-		// TODO: free object arglists, paramlists, etc
+		carrot_free(&result);
+		interpreter_free(&interpreter);
 		free_node(&n);
 
-		parser_free(&parser);
 		free(source);
 
 		return 0;

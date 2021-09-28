@@ -1,3 +1,3 @@
 #!/bin/bash
 
-gcc -Wall -O0 -o carrot.out src/*.c
+gcc -Wall -g -o carrot.out src/*.c lib/src/*.c

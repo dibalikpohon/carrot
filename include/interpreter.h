@@ -2,9 +2,10 @@
 #define INTERPRETER_H
 
 #include "../include/parser.h"
+#include "../lib/include/sds.h"
 
 typedef enum {
-	CARROT_STR, CARROT_INT, CARROT_FLOAT, CARROT_NULL,
+	CARROT_STR, CARROT_INT, CARROT_FLOAT, CARROT_LIST, CARROT_NULL,
 	CARROT_FUNCTION,
 } carrot_dtype_t;
 
@@ -21,7 +22,7 @@ typedef struct CarrotObj_t {
 	struct CarrotObj_t  *func_args;
 
 	/* Common properties */
-	char                repr[255];
+	sds                 repr;
 } CarrotObj;
 
 
@@ -42,13 +43,19 @@ CarrotObj interpreter_interpret(Interpreter *interpreter, Node *node);
 CarrotObj interpreter_visit(Interpreter *context, Node *node);
 CarrotObj interpreter_visit_func_call(Interpreter *context, Node *node);
 CarrotObj interpreter_visit_list(Interpreter *context, Node *node);
+CarrotObj interpreter_visit_statements(Interpreter *context, Node *node);
 CarrotObj interpreter_visit_value(Interpreter *context, Node *node);
 CarrotObj interpreter_visit_var_access(Interpreter *context, Node *node);
 CarrotObj interpreter_visit_var_def(Interpreter *context, Node *node);
 
+CarrotObj carrot_noop();
 CarrotObj carrot_null();
 CarrotObj carrot_int(int int_val);
+CarrotObj carrot_list(CarrotObj *list_items);
 CarrotObj carrot_float(float float_val);
 CarrotObj carrot_str(char *str_val);
+
+void carrot_free(CarrotObj *root);
+void interpreter_free(Interpreter *interpreter);
 
 #endif

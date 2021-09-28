@@ -9,22 +9,25 @@
 #include "../lib/include/stb_ds.h"
 
 void free_node(Node *node) {
-	if (node->type == N_LIST) {
+	if (node->type == N_STATEMENTS) {
 		int len;
-
 		len = arrlen(node->list_items);
 		for (int i = 0; i < len; i++) {
 			free_node(&node->list_items[i]);
 		}
-
-		len = arrlen(node->interpreted_list_items);
-		for (int i = 0; i < len; i++) {
-			free_node(&node->interpreted_list_items[i]);
+		if (node->list_items != NULL) arrfree(node->list_items);
+	} else if (node->type == N_STATEMENTS) {
+		for (int i = 0; i < arrlen(node->statements); i++) {
+			free_node(&node->statements[i]);
 		}
-		arrfree(node->list_items);
-		arrfree(node->interpreted_list_items);
+		if (node->statements != NULL) arrfree(node->statements);
 	} else if (node->type == N_FUNC_CALL) {
+		for (int i = 0; i < arrlen(node->func_args); i++) {
+			free_node(&node->func_args[i]);
+		}
+		if (node->func_args != NULL) arrfree(node->func_args);
 	}
+
 }
 
 Token parser_consume(Parser *parser) {
@@ -45,14 +48,6 @@ void parser_init(Parser *parser, char *source) {
 
 Token parser_lookahed(Parser *parser) {
 	return parser->lexer.tokens[parser->i + 1];
-}
-
-void parser_free(Parser *parser) {
-	for (int i = 0; i < parser->node_cnt; i++) {
-		if (parser->nodes[i].type == N_STATEMENTS) {
-			arrfree(parser->nodes[i].statements);
-		}
-	}
 }
 
 Node parser_parse(Parser *parser) {
@@ -81,8 +76,7 @@ Node parser_parse_atom(Parser *parser) {
 		val_node.value_token = tok;
 		parser_consume(parser);
 		return val_node;
-	}
-
+	} 
 	printf("ERROR: literal or expression expected\n");
 	exit(1);
 }
@@ -142,7 +136,7 @@ Node parser_parse_identifier(Parser *parser) {
 			 * since we found equal char
 			 */
 			parser_consume(parser);
-			Token var_value_token = parser_consume(parser);
+			Token var_value_token = parser->lexer.tokens[parser->i];
 
 			return parser_parse_variable_def(parser, 
 							 id_token,
@@ -211,9 +205,33 @@ Node parser_parse_keyword(Parser *parser) {
 	exit(1);	
 }
 
+Node parser_parse_list(Parser *parser) {
+	Node obj;
+	Node *list_items = NULL;
+	if (parser->current_token.tok_kind == T_RBRACKET) {
+		parser_consume(parser);
+	} else {
+		Node item = parser_parse_expression(parser);
+		arrput(list_items, item);
+		while (parser->current_token.tok_kind == T_COMMA) {
+			parser_consume(parser);
+			Node item = parser_parse_expression(parser);
+			arrput(list_items, item);
+		}
+
+		if (parser->current_token.tok_kind != T_RBRACKET) {
+			printf("ERROR: ] expected\n");
+			exit(1);
+		}
+		parser_consume(parser);
+	}
+	obj.list_items = list_items;
+	return obj;
+}
+
+
 Node parser_parse_power(Parser *parser) {
 	Node left = parser_parse_call(parser);
-
 	return left;
 }
 
@@ -225,7 +243,7 @@ Node parser_parse_script(Parser *parser) {
 	}
 
 	Node list_node;
-	list_node.type = N_LIST;
+	list_node.type = N_STATEMENTS;
 	list_node.list_items = statements;
 	return list_node;
 }
@@ -282,6 +300,34 @@ Node parser_parse_variable_def(Parser *parser,
 		obj.var_type = DT_FLOAT;
 		if (initialized) obj.float_val = atof(var_value_token.text);
 		else obj.float_val = 0.0;
+	} else if (strcmp(var_type_str, "list") == 0) {
+		if (parser->current_token.tok_kind != T_LBRACKET) {
+			printf("[ expected");
+			exit(1);
+		}
+		parser_consume(parser);
+
+		obj.var_type = DT_LIST;
+		Node *list_items = NULL;
+		if (parser->current_token.tok_kind == T_RBRACKET) {
+			parser_consume(parser);
+		} else {
+			Node item = parser_parse_expression(parser);
+			arrput(list_items, item);
+			while (parser->current_token.tok_kind == T_COMMA) {
+				parser_consume(parser);
+				Node item = parser_parse_expression(parser);
+				arrput(list_items, item);
+			}
+
+			if (parser->current_token.tok_kind != T_RBRACKET) {
+				printf("] expected");
+			}
+
+			parser_consume(parser);
+		}
+		obj.list_items = list_items;
+
 	} else if (strcmp(var_type_str, "any") == 0) {
 		// TODO: make a separate type inference function
 		if (initialized) {

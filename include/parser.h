@@ -32,7 +32,6 @@ typedef struct Symtable_t {
 
 typedef struct Node_t {
 	node_type_t        type;
-	char               repr[MAX_STR_LITERAL_LEN];
 
 	/* value node */
 	int                int_val;
@@ -40,13 +39,11 @@ typedef struct Node_t {
 	char               str_val[MAX_STR_LITERAL_LEN];
 	struct Node_t      *obj_val;
 	Token              value_token; // shared with variable definition node
+	struct Node_t      *list_items; // if a list. TODO: more consistent naming
 
 	/* statements node */
 	struct Node_t      *statements;
 
-	/* List node */
-	struct Node_t      *list_items;
-	//struct Node_t      *interpreted_list_items;
 
 	/* variable definition node */
 	char               var_name[MAX_VAR_NAME_LEN];

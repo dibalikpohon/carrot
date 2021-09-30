@@ -16,16 +16,13 @@ void free_node(Node *node) {
 			free_node(&node->list_items[i]);
 		}
 		if (node->list_items != NULL) arrfree(node->list_items);
-	} else if (node->type == N_STATEMENTS) {
-		for (int i = 0; i < arrlen(node->statements); i++) {
-			free_node(&node->statements[i]);
-		}
-		if (node->statements != NULL) arrfree(node->statements);
 	} else if (node->type == N_FUNC_CALL) {
 		for (int i = 0; i < arrlen(node->func_args); i++) {
 			free_node(&node->func_args[i]);
 		}
 		if (node->func_args != NULL) arrfree(node->func_args);
+	} else if (node->type == N_VAR_DEF) {
+		if (arrlen(node->list_items) >0 ) arrfree(node->list_items);
 	}
 
 }
@@ -64,16 +61,16 @@ Node parser_parse_arith(Parser *parser) {
 }
 
 Node parser_parse_atom(Parser *parser) {
-	Token tok = parser->current_token;
+	tok_kind_t kind = parser->current_token.tok_kind;
 
-	if (tok.tok_kind == T_ID) {
+	if (kind == T_ID) {
 		return parser_parse_identifier(parser);
-	} else if (tok.tok_kind == T_STR ||
-		   tok.tok_kind == T_INT ||
-		   tok.tok_kind == T_FLOAT) {
+	} else if (kind == T_STR ||
+		   kind == T_INT ||
+		   kind == T_FLOAT) {
 		Node val_node;
 		val_node.type = N_LITERAL;
-		val_node.value_token = tok;
+		val_node.value_token = parser->current_token;
 		parser_consume(parser);
 		return val_node;
 	} 

@@ -26,7 +26,7 @@ typedef enum {
 
 
 typedef struct Symtable_t {
-	char               *key;
+	char          *key;
 	struct Node_t *value;
 } Symtable;
 
@@ -39,25 +39,26 @@ typedef struct Node_t {
 	char               str_val[MAX_STR_LITERAL_LEN];
 	struct Node_t      *obj_val;
 	Token              value_token; // shared with variable definition node
-	struct Node_t      *list_items; // if a list. TODO: more consistent naming
+	struct Node_t      **list_items; // if a list. TODO: more consistent naming
 
 	/* statements node */
-	struct Node_t      *statements;
+	struct Node_t      **statements;
 
 
 	/* variable definition node */
 	char               var_name[MAX_VAR_NAME_LEN];
 	data_type_t        var_type;
 	char               var_type_str[MAX_VAR_TYPE_LEN];
+	struct Node_t      *var_node;
 
 	/* function definition node */
 	char               func_name[MAX_VAR_NAME_LEN];
 	int                is_builtin;
-	struct Node_t      *func_params;
+	struct Node_t      **func_params;
 	struct Node_t      *func_body;
 
 	/* function call node */
-	struct Node_t      *func_args;
+	struct Node_t      **func_args;
 	struct Node_t      *func_return_value;
 } Node;
 
@@ -66,32 +67,33 @@ typedef struct PARSER {
 	int   i;
 	Lexer lexer;
 	int   node_cnt;
-	Node  nodes[MAX_NODE_NUM];
+	Node  *nodes[MAX_NODE_NUM];
 } Parser;
 
+Node *init_node();
 void free_node(Node *node);
 Token parser_consume(Parser *parser);
 void parser_free(Parser *parser);
 void parser_init(Parser *parser, char *source);
 Token parser_lookahed(Parser *parser);
-Node parser_parse(Parser *parser);
-Node parser_parse_arith(Parser *parser);
-Node parser_parse_atom(Parser *parser);
-Node parser_parse_call(Parser *parser);
-Node parser_parse_comp(Parser *parser);
-Node parser_parse_expression(Parser *parser);
-Node parser_parse_factor(Parser *parser);
-Node parser_parse_identifier(Parser *parser);
-Node parser_parse_keyword(Parser *parser);
-Node parser_parse_list(Parser *parser);
-Node parser_parse_literal(Parser *parser);
-Node parser_parse_power(Parser *parser);
-Node parser_parse_script(Parser *parser);
-Node parser_parse_statement(Parser *parser);
-Node parser_parse_statements(Parser *parser);
-Node parser_parse_term(Parser *parser);
-Node parser_parse_value(Parser *parser);
-Node parser_parse_variable_def(Parser *parser,
+Node *parser_parse(Parser *parser);
+Node *parser_parse_arith(Parser *parser);
+Node *parser_parse_atom(Parser *parser);
+Node *parser_parse_call(Parser *parser);
+Node *parser_parse_comp(Parser *parser);
+Node *parser_parse_expression(Parser *parser);
+Node *parser_parse_factor(Parser *parser);
+Node *parser_parse_identifier(Parser *parser);
+Node *parser_parse_keyword(Parser *parser);
+Node *parser_parse_list(Parser *parser);
+Node *parser_parse_literal(Parser *parser);
+Node *parser_parse_power(Parser *parser);
+Node *parser_parse_script(Parser *parser);
+Node *parser_parse_statement(Parser *parser);
+Node *parser_parse_statements(Parser *parser);
+Node *parser_parse_term(Parser *parser);
+Node *parser_parse_value(Parser *parser);
+Node *parser_parse_variable_def(Parser *parser,
 		                    Token id_token,
 		                    char *var_type_str, 
 				    Token var_value_token,

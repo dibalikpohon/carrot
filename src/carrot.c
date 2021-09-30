@@ -62,6 +62,7 @@ void carrot_register_builtin_func(char *name,
 	builtin_func->type = CARROT_FUNCTION;
 	builtin_func->builtin_func = func;
 	builtin_func->is_builtin = 1;
+	builtin_func->repr = sdsnew("function");
 	strcpy(builtin_func->func_name, name);
 	shput(interpreter->sym_table, name, builtin_func);
 }
@@ -81,7 +82,7 @@ int main(int argc, char **argv) {
 
 		Parser parser;
 		parser_init(&parser, source);
-		Node n = parser_parse(&parser);
+		Node *n = parser_parse(&parser);
 		
 		// ..........................
 		// TODO: perform typechecking
@@ -94,22 +95,20 @@ int main(int argc, char **argv) {
 		Interpreter interpreter = create_interpreter();
 
 		/* register builtin function */
-		//carrot_register_builtin_func("print",
-		//		             &carrot_func_print,
-		//			     &interpreter);
+		carrot_register_builtin_func("print",
+				             &carrot_func_print,
+					     &interpreter);
 		carrot_register_builtin_func("println",
 				             &carrot_func_println,
 					     &interpreter);
-		//carrot_register_builtin_func("type",
-		//		             &carrot_func_type,
-		//			     &interpreter);
+		carrot_register_builtin_func("type",
+				             &carrot_func_type,
+					     &interpreter);
 
-		CarrotObj *result = interpreter_interpret(&interpreter, &n);
+		interpreter_interpret(&interpreter, n);
 
-		//carrot_free(result);
-
-		free_node(&n);
 		interpreter_free(&interpreter);
+		free_node(n);
 		free(source);
 
 		carrot_finalize();

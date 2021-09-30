@@ -9,6 +9,7 @@ Interpreter create_interpreter() {
 	Interpreter interpreter;
 	interpreter.parent = NULL;
 	interpreter.sym_table = NULL;
+	//sh_new_strdup(interpreter.sym_table);
 	return interpreter;
 }
 
@@ -55,7 +56,7 @@ CarrotObj *interpreter_visit_func_call(Interpreter *context, Node *node) {
 	if (func_to_call->is_builtin) {
 		CarrotObj **func_args = NULL;
 		for (int i = 0; i < arrlen(node->func_args); i++) {
-			CarrotObj *itprtd = interpreter_visit(context, &node->func_args[i]);
+			CarrotObj *itprtd = interpreter_visit(context, node->func_args[i]);
 			arrput(func_args, itprtd);
 		}
 		CarrotObj *res = func_to_call->builtin_func(func_args);
@@ -75,7 +76,7 @@ CarrotObj *interpreter_visit_statements(Interpreter *context, Node *node) {
 
 	CarrotObj **list_items = NULL;
 	for (int i = 0; i < list_item_count; i++) {
-		CarrotObj *item = interpreter_visit(context, &node->list_items[i]);
+		CarrotObj *item = interpreter_visit(context, node->list_items[i]);
 		arrput(list_items, item);
 	}
 
@@ -92,9 +93,11 @@ CarrotObj *interpreter_visit_value(Interpreter *context, Node *node) {
 	} else if (node->var_type == DT_NULL) {
 		return carrot_null();
 	} else if (node->var_type == DT_LIST) {
-		printf("List literal visit implementation is incomplete\n");
-		exit(1);
 		CarrotObj **list_items = NULL;
+		for (int i = 0; i < arrlen(node->list_items); i++) {
+			arrput(list_items,
+			       interpreter_visit(context, node->list_items[i]));
+		}
 		return carrot_list(list_items);
 	} else {
 		printf("The data type for \"%s\" is not supported yet", node->value_token.text);
@@ -105,8 +108,10 @@ CarrotObj *interpreter_visit_value(Interpreter *context, Node *node) {
 
 CarrotObj *interpreter_visit_var_access(Interpreter *context, Node *node) {
 	char *var_name = node->var_name;
-	int idx = shgeti(context->sym_table, var_name);
-	if (idx == -1) {
+	CarrotObj *obj = shget(context->sym_table, var_name);
+
+	if (obj == NULL) {
+		printf("keys: %s\n", var_name);
 		char msg[255];
 		sprintf(msg,
 		        "You are trying to access variable \"%s\", while it is undefined. "
@@ -116,32 +121,14 @@ CarrotObj *interpreter_visit_var_access(Interpreter *context, Node *node) {
 		exit(1);
 	}
 
+
 	return shget(context->sym_table, var_name);
 }
 
 CarrotObj *interpreter_visit_var_def(Interpreter *context, Node *node) {
-	CarrotObj *value_obj;
-	
-	if (node->var_type == DT_STR) {
-		value_obj = carrot_str(node->str_val);
-	} else if (node->var_type == DT_INT) {
-		value_obj = carrot_int(node->int_val);
-	} else if (node->var_type == DT_FLOAT) {
-		value_obj = carrot_float(node->float_val);
-	} else if (node->var_type == DT_NULL) {
-		value_obj = carrot_null();
-	} else if (node->var_type == DT_LIST) {
-		CarrotObj **list_items = NULL;
-		for (int i = 0; i < arrlen(node->list_items); i++) {
-			arrput(list_items,
-			       interpreter_visit(context, &node->list_items[i]));
-		}
-		value_obj = carrot_list(list_items);
-	} else {
-		printf("The data type for %s is not supported yet", node->var_name);
-		exit(1);
-	}
-	shput(context->sym_table, node->var_name, value_obj);
+	CarrotObj *obj = interpreter_visit(context, node->var_node);
+	shput(context->sym_table, node->var_name, obj);
+	printf("VISIT VARDEF\n");
 	return carrot_null();
 }
 
@@ -164,16 +151,15 @@ CarrotObj *carrot_noop() {
 CarrotObj *carrot_null() {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_NULL;
-	sprintf(obj->type_str, "%s", "null");
+	obj->type_str = sdsnew("null");
 	obj->repr = sdsnew("null");
-	
 	return obj;
 }
 
 CarrotObj *carrot_int(int int_val) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_INT;
-	sprintf(obj->type_str, "%s", "int");
+	obj->type_str = sdsnew("int");
 	char repr[255];
 	sprintf(repr, "%d", int_val);
 	obj->repr = sdsnew(repr);
@@ -184,11 +170,19 @@ CarrotObj *carrot_list(CarrotObj **list_items) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_LIST;
 	obj->list_items = list_items;
-	sprintf(obj->type_str, "%s", "list");
+	obj->type_str = sdsnew("list");
 	sds repr = sdsnew("[");
 	for (int i = 0; i < arrlen(list_items); i++) {
-		repr = sdscatsds(repr, list_items[i]->repr);
-		repr = sdscat(repr, ", ");
+		if (list_items[i]->type == CARROT_STR) {
+			repr = sdscat(repr, "\"");
+			repr = sdscatsds(repr, list_items[i]->repr);
+			repr = sdscat(repr, "\"");
+		} else {
+			repr = sdscatsds(repr, list_items[i]->repr);
+		}
+
+		if (i < arrlen(list_items) - 1)
+			repr = sdscat(repr, ", ");
 	}
 	repr = sdscat(repr, "]");
 	obj->repr = repr;
@@ -198,7 +192,8 @@ CarrotObj *carrot_list(CarrotObj **list_items) {
 CarrotObj *carrot_float(float float_val) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_FLOAT;
-	sprintf(obj->type_str, "%s", "float");
+	
+	obj->type_str = sdsnew("float");
 
 	char repr[255];
 	sprintf(repr, "%f", float_val);
@@ -209,12 +204,14 @@ CarrotObj *carrot_float(float float_val) {
 CarrotObj *carrot_str(char *str_val) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_STR;
-	sprintf(obj->type_str, "%s", "str");
+	obj->type_str = sdsnew("str");
 	obj->repr = sdsnew(str_val);
 	return obj;
 }
 
 void carrot_finalize() {
+	/* Frees remaining CarrotObj's in heap.
+	 * Call this in the very end of main function */
 	int len = shlen(CARROT_TRACKING_ARR);
 	for (int i = 0; i < len; i++) {
 		CarrotObj *obj = CARROT_TRACKING_ARR[i].value;
@@ -226,27 +223,34 @@ void carrot_finalize() {
 }
 
 void carrot_free(CarrotObj *root) {
-	//if (root->type == CARROT_LIST) {
-	//	for (int i = 0; i < arrlen(root->list_items); i++) {
-	//		carrot_free(root->list_items[i]);
-	//	}
-	//	arrfree(root->list_items);
-	//	free(root->hash);
-	//	sdsfree(root->repr);
-	//	free(root);
-	//} 
+	/* It only frees the members of root. If root member is a pointer
+	 * to array of allocated objects, it should be freed manually somewhere
+	 * else */
 	if (arrlen(root->list_items) >= 0) arrfree(root->list_items);
 	free(root->hash);
 	sdsfree(root->repr);
+	sdsfree(root->type_str);
 	free(root);
 }
 
 void carrot_init() {
+	/* Initialize hashtable that tracks CarrotObj's allocated in heap */
 	CARROT_TRACKING_ARR = NULL;
 	sh_new_strdup(CARROT_TRACKING_ARR);
 }
 
 void interpreter_free(Interpreter *interpreter) {
+	/* Frees the members of interpreter struct as well as
+	 * the content of symbol table. */
+	int len = shlen(interpreter->sym_table);
+	for (int i = 0; i < len; i++) {
+		CarrotObj* obj = interpreter->sym_table[i].value;
+		char *hash = obj->hash;
+		char *key = interpreter->sym_table[i].key;
+		shdel(CARROT_TRACKING_ARR, hash);
+		shdel(interpreter->sym_table, key);
+		carrot_free(obj);
+	}
 	shfree(interpreter->sym_table);
 }
 

@@ -11,7 +11,7 @@ typedef enum {
 
 typedef struct CarrotObj_t {
 	carrot_dtype_t      type;
-	char                type_str[255];
+	sds                 type_str;
 
 	struct CarrotObj_t  **list_items;
 

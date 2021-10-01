@@ -12,7 +12,7 @@ typedef enum {
 	/* Arithmetic */
 	T_PLUS, T_MINUS, T_MULT, T_DIV,
 	/* Assignment */
-	T_EQUAL,
+	T_EQUAL, T_COLON, T_RARROW,
 	/* Parentheses, brackets, etc. */
 	T_LPAREN, T_RPAREN,
 	T_LBRACKET, T_RBRACKET,
@@ -45,6 +45,7 @@ Token create_token(tok_kind_t tok_kind, char *text);
 void make_identifier(Lexer *lexer);
 void make_number(Lexer *lexer);
 void make_single_char_token(Lexer *lexer, tok_kind_t kind, char *text);
+void make_two_chars_token(Lexer *lexer, tok_kind_t kind, char *text);
 void make_string(Lexer *lexer);
 
 void lexer_add_token(Lexer *lexer, Token t);

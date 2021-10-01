@@ -12,14 +12,16 @@ Node **NODE_TRACKING_ARR = NULL;
 
 Node *init_node() {
 	Node *n = malloc(sizeof(Node));
+	n->type = N_UNKNOWN;
+	n->var_type = DT_UNKNOWN;
 	n->obj_val = NULL;
 	n->list_items = NULL;
 	n->statements = NULL;
 	n->var_node = NULL;
 	n->func_params = NULL;
-	n->func_body = NULL;
+	n->func_statements = NULL;
 	n->func_args = NULL;
-	n->func_return_value = NULL;
+	n->return_value = NULL;
 	arrput(NODE_TRACKING_ARR, n);
 	return n;
 }
@@ -30,6 +32,8 @@ void free_node(Node *node) {
 		Node *n = NODE_TRACKING_ARR[i];
 		if (n->list_items != NULL) arrfree(n->list_items);
 		if (n->func_args != NULL) arrfree(n->func_args);
+		if (n->func_statements != NULL) arrfree(n->func_statements);
+		if (n->func_params != NULL) arrfree(n->func_params);
 		free(n);
 	}
 	arrfree(NODE_TRACKING_ARR);
@@ -133,6 +137,97 @@ Node *parser_parse_factor(Parser *parser) {
 	return left;
 }
 
+Node *parser_parse_function_def(Parser *parser, Token id_token) {
+	if (parser->current_token.tok_kind != T_LPAREN) {
+		printf("ERROR: expected \"(\"");
+		exit(1);
+	}
+	parser_consume(parser);
+
+	Node **func_params = NULL;
+	if (parser->current_token.tok_kind == T_RPAREN) {
+		/* case 1: function without parameter */
+		parser_consume(parser);
+	} else if (parser->current_token.tok_kind == T_ID) {
+		/* case 2: function with parameter(s) */
+		arrput(func_params, parser_parse_function_param(parser));
+		while (parser->current_token.tok_kind == T_COMMA) {
+			parser_consume(parser);
+			arrput(func_params, parser_parse_function_param(parser));
+		}
+
+		if (parser->current_token.tok_kind != T_RPAREN) {
+			printf("ERROR: expected identifier or \")\" to define a function.");
+			exit(1);
+		}
+		parser_consume(parser);
+	} else {
+		printf("ERROR: expected identifier or \")\" to define a function.");
+		exit(1);
+	}
+
+	/* parse the return type */
+	if (parser->current_token.tok_kind != T_RARROW) {
+		printf("ERROR: expected \"->\" to define a function.");
+		exit(1);
+	}
+	parser_consume(parser);
+
+	if ((parser->current_token.tok_kind != T_ID) &&
+	    (parser->current_token.tok_kind != T_KEYWORD)) {
+		printf("ERROR: specifcy return type");
+	}
+	parser_consume(parser);
+
+	if (parser->current_token.tok_kind != T_COLON) {
+		printf("ERROR: expected \":\" to define a function.");
+		exit(1);
+	}
+	parser_consume(parser);
+
+	/* parse the function body */
+	Node *func_node_def = init_node();
+	while (strcmp(parser->current_token.text, "end") != 0) {
+		if (strcmp(parser->current_token.text, "return") == 0) {
+			parser_consume(parser);
+			Node *return_node = init_node();
+			return_node->type = N_RETURN;
+			return_node->return_value = 
+				parser_parse_expression(parser);
+			arrput(func_node_def->func_statements, return_node);
+		} else {
+			arrput(func_node_def->func_statements,
+			       parser_parse_statement(parser));
+		}
+	}
+	parser_consume(parser);
+
+	func_node_def->func_params = func_params;
+	func_node_def->is_builtin = 0;
+	func_node_def->type = N_FUNC_DEF;
+	strcpy(func_node_def->func_name, id_token.text);
+	return func_node_def;
+}
+
+Node *parser_parse_function_param(Parser *parser) {
+	/* TODO: Treat as variable definition node */
+	Node *param = init_node();
+	strcpy(param->param_name, parser->current_token.text);
+	
+	parser_consume(parser);
+	if (parser->current_token.tok_kind != T_COLON) {
+		printf("ERROR: expected colon");
+		exit(1);
+	}
+
+	parser_consume(parser);
+	char *var_type_str = parser->current_token.text;
+	sprintf(param->var_type_str, "%s", var_type_str);
+	parser_consume(parser);
+
+	return param;
+}
+
 Node *parser_parse_identifier(Parser *parser) {
 	/* 3 possibilities:
 	 * - variable declaration with dtype
@@ -142,12 +237,17 @@ Node *parser_parse_identifier(Parser *parser) {
 	Token id_token = parser_consume(parser);
 	Token next_token = parser->current_token; //parser_consume(parser);
 
-	if (strcmp(next_token.text, "as") == 0) {
+	if (next_token.tok_kind == T_COLON) {
 		parser_consume(parser);
-		/* Handle variable declaration */
-
 		// holding data type
 		Token data_type_token = parser_consume(parser);
+
+		/* Handle function definition */
+		if (strcmp(data_type_token.text, "func") == 0) {
+			return parser_parse_function_def(parser, id_token);
+		}
+
+		/* Handle variable declaration */
 
 		if (parser->current_token.tok_kind == T_EQUAL) {
 			/* The variable is initialized with some value 
@@ -243,6 +343,8 @@ Node *parser_parse_list(Parser *parser) {
 		}
 		parser_consume(parser);
 	}
+	obj->type = N_LITERAL;
+	obj->var_type = DT_LIST;
 	obj->list_items = list_items;
 	return obj;
 }
@@ -268,9 +370,6 @@ Node *parser_parse_script(Parser *parser) {
 
 Node *parser_parse_statement(Parser *parser) {
 	return parser_parse_expression(parser);
-}
-
-Node *parser_parse_statements(Parser *parser){
 }
 
 Node *parser_parse_term(Parser *parser) {

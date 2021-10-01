@@ -29,10 +29,14 @@ CarrotObj *interpreter_visit(Interpreter *context, Node *node) {
 			return interpreter_visit_var_access(context, node);
 		case N_LITERAL:
 			return interpreter_visit_value(context, node);
+		case N_FUNC_DEF: 
+			return interpreter_visit_func_def(context, node);
+		case N_RETURN: 
+			return interpreter_visit_return(context, node);
 		// TODO: complete missing cases
 		case N_STATEMENT:
 		case N_NULL: 
-		case N_FUNC_DEF: 
+		case N_UNKNOWN: 
 			break;
 	}
 	printf("%s\n", "ERROR: Unknown node");
@@ -41,19 +45,19 @@ CarrotObj *interpreter_visit(Interpreter *context, Node *node) {
 
 CarrotObj *interpreter_visit_func_call(Interpreter *context, Node *node) {
 	char *func_name = node->func_name;
-	int idx = shgeti(context->sym_table, func_name);
-	if (idx == -1) {
+	CarrotObj *func_to_call = carrot_get_var(func_name, context);
+	if (func_to_call == NULL) {
 		char msg[255];
 		sprintf(msg,
 		        "Function \"%s\" is undefined. "
 			"Make sure you define the function before calling it.",
 			func_name);
-		carrot_log_error(msg);
+		carrot_log_error(msg, "idklol", -1);
 		exit(1);
 	}
 
-	CarrotObj *func_to_call = shget(context->sym_table, func_name);
 	if (func_to_call->is_builtin) {
+		/* Case 1: the function being called is a builtin function */
 		CarrotObj **func_args = NULL;
 		for (int i = 0; i < arrlen(node->func_args); i++) {
 			CarrotObj *itprtd = interpreter_visit(context, node->func_args[i]);
@@ -66,9 +70,71 @@ CarrotObj *interpreter_visit_func_call(Interpreter *context, Node *node) {
 		//for (int i = 0; i < arrlen(func_args); i++) sdsfree(func_args[i].repr);
 		if (func_args != NULL) arrfree(func_args);
 		return res;
-	} 
+	} else {
+		/* Case 2: the function being called is made inside carrot script */
+		// -------
+		//	Populate local variables within the function based on 
+		//	argument names
+		CarrotObj *return_value = NULL;
+		Interpreter local_interpreter = create_interpreter();
+		local_interpreter.parent = context;
+		for (int i = 0; i < arrlen(func_to_call->func_arg_names); i++) {
+			char *argname = func_to_call->func_arg_names[i];
+			CarrotObj *argval = interpreter_visit(
+				&local_interpreter,
+				node->func_args[i]
+			);
+			shput(local_interpreter.sym_table, argname, argval);
+		}
+		//      Evaluate the function body (a list of statements)
+		//
+		for (int i = 0; i < arrlen(func_to_call->func_statements); i++) {
+			interpreter_visit(&local_interpreter,
+			                  func_to_call->func_statements[i]);
+			
+			// TODO: check if func_to_call->func_statements[i] node is
+			// a N_RETURN node, and return accordingly
+			Node *stmt = func_to_call->func_statements[i];
+			if (stmt->type == N_RETURN) {
+				return_value = interpreter_visit(&local_interpreter,
+						                 stmt);
+				break;
+			}
+		}
 
+		//      End the local variable lifetime, except if it refers to
+		//      the return value object
+		int len = shlen(local_interpreter.sym_table);
+		for (int i = 0; i < len; i++) {
+			/* if return value obj also belongs to local sym_table,
+			 * detach it first so it is not wiped and persists after
+			 * leaving this function. It will still be tracked by
+			 * the global tracker */
+			if (local_interpreter.sym_table[i].value == return_value) {
+				shdel(local_interpreter.sym_table,
+				      local_interpreter.sym_table[i].key);
+			}
+		}
+		interpreter_free(&local_interpreter);
+		if (return_value==NULL) return carrot_null();
+		return return_value;
+	}
+}
+
+CarrotObj *interpreter_visit_func_def(Interpreter *context, Node *node) {
+	CarrotObj *function = carrot_obj_allocate();
+	function->func_statements = node->func_statements;
+	strcpy(function->func_name, node->func_name);
+	for (int i = 0; i < arrlen(node->func_params); i++) {
+		//printf("%s\n", node->func_params[i]->param_name);
+		arrput(function->func_arg_names, node->func_params[i]->param_name);
+	}
+	shput(context->sym_table, node->func_name, function);
 	return carrot_null();
+}
+
+CarrotObj *interpreter_visit_return(Interpreter *context, Node *node) {
+	return interpreter_visit(context, node->return_value);
 }
 
 CarrotObj *interpreter_visit_statements(Interpreter *context, Node *node) {
@@ -108,27 +174,24 @@ CarrotObj *interpreter_visit_value(Interpreter *context, Node *node) {
 
 CarrotObj *interpreter_visit_var_access(Interpreter *context, Node *node) {
 	char *var_name = node->var_name;
-	CarrotObj *obj = shget(context->sym_table, var_name);
+	CarrotObj *obj = carrot_get_var(var_name, context);
 
 	if (obj == NULL) {
-		printf("keys: %s\n", var_name);
 		char msg[255];
 		sprintf(msg,
 		        "You are trying to access variable \"%s\", while it is undefined. "
 			"Have you defined it before?",
 			var_name);
-		carrot_log_error(msg);
+		carrot_log_error(msg, "idklol", -1);
 		exit(1);
 	}
 
-
-	return shget(context->sym_table, var_name);
+	return obj;
 }
 
 CarrotObj *interpreter_visit_var_def(Interpreter *context, Node *node) {
 	CarrotObj *obj = interpreter_visit(context, node->var_node);
 	shput(context->sym_table, node->var_name, obj);
-	printf("VISIT VARDEF\n");
 	return carrot_null();
 }
 
@@ -156,13 +219,26 @@ CarrotObj *carrot_null() {
 	return obj;
 }
 
+CarrotObj *carrot_get_var(char *var_name, Interpreter *context) {
+	/* look up the variable based on name. If it is not found 
+	 * in the context's sym_table, then recursicely look up
+	 * on context's parent interpreter */
+	CarrotObj *obj = shget(context->sym_table, var_name);
+	if (obj != NULL)
+		return obj;
+
+	if (obj == NULL && context->parent != NULL) {
+		return carrot_get_var(var_name, context->parent);
+	}
+
+	return NULL;
+}
+
 CarrotObj *carrot_int(int int_val) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_INT;
 	obj->type_str = sdsnew("int");
-	char repr[255];
-	sprintf(repr, "%d", int_val);
-	obj->repr = sdsnew(repr);
+	obj->repr = sdscatprintf(sdsempty(), "%d", int_val);
 	return obj;
 }
 
@@ -192,12 +268,8 @@ CarrotObj *carrot_list(CarrotObj **list_items) {
 CarrotObj *carrot_float(float float_val) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_FLOAT;
-	
 	obj->type_str = sdsnew("float");
-
-	char repr[255];
-	sprintf(repr, "%f", float_val);
-	obj->repr = sdsnew(repr);
+	obj->repr = sdscatprintf(sdsempty(), "%f", float_val);
 	return obj;
 }
 
@@ -227,6 +299,7 @@ void carrot_free(CarrotObj *root) {
 	 * to array of allocated objects, it should be freed manually somewhere
 	 * else */
 	if (arrlen(root->list_items) >= 0) arrfree(root->list_items);
+	if (arrlen(root->func_arg_names) >= 0) arrfree(root->func_arg_names);
 	free(root->hash);
 	sdsfree(root->repr);
 	sdsfree(root->type_str);

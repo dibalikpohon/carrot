@@ -15,11 +15,15 @@ typedef struct CarrotObj_t {
 
 	struct CarrotObj_t  **list_items;
 
-	/* Function call */
+	/* Function call object properties */
 	struct CarrotObj_t  *(*builtin_func)(struct CarrotObj_t **args);
 	int                 is_builtin;
-	char                func_name[255];
-	struct CarrotObj_t  *func_args;
+	char                func_name[255];   // shared with function def object
+	char                **func_arg_names; // shared with function def object
+
+	/* Function definition object properties 
+	 * No need to free this inside interpreter_free() */
+	Node                **func_statements;
 
 	/* Common properties */
 	sds                 repr;
@@ -44,7 +48,9 @@ CarrotObj *interpreter_init(Interpreter *interpreter, Node *node);
 CarrotObj *interpreter_interpret(Interpreter *interpreter, Node *node);
 CarrotObj *interpreter_visit(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_func_call(Interpreter *context, Node *node);
+CarrotObj *interpreter_visit_func_def(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_list(Interpreter *context, Node *node);
+CarrotObj *interpreter_visit_return(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_statements(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_value(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_var_access(Interpreter *context, Node *node);
@@ -53,6 +59,7 @@ CarrotObj *interpreter_visit_var_def(Interpreter *context, Node *node);
 CarrotObj *carrot_obj_allocate();
 CarrotObj *carrot_noop();
 CarrotObj *carrot_null();
+CarrotObj *carrot_get_var(char *var_name, Interpreter *context);
 CarrotObj *carrot_int(int int_val);
 CarrotObj *carrot_list(CarrotObj **list_items);
 CarrotObj *carrot_float(float float_val);

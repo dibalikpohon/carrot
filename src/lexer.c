@@ -32,6 +32,8 @@ char *tok_kind_to_str(tok_kind_t kind) {
 		case T_PLUS: return "T_PLUS";
 		case T_MINUS: return "T_MINUS";
 		case T_EQUAL: return "T_EQUAL";
+		case T_COLON: return "T_COLON";
+		case T_RARROW: return "T_RARROW";
 		case T_EOF: return "T_EOF";
 		case T_LPAREN: return "T_LPAREN";
 		case T_RPAREN: return "T_RPAREN";
@@ -86,7 +88,7 @@ void make_number(Lexer *lexer) {
 			 "foo",
 			 lexer->line_num,
 			 s);
-		carrot_log_error(msg);
+		carrot_log_error(msg, "idklol", -1);
 		exit(1);
 	}
 
@@ -99,6 +101,12 @@ void make_number(Lexer *lexer) {
 
 void make_single_char_token(Lexer *lexer, tok_kind_t kind, char *text) {
 	lexer_add_token(lexer, create_token(kind, text));
+	lexer_next(lexer);
+}
+
+void make_two_chars_token(Lexer *lexer, tok_kind_t kind, char *text) {
+	lexer_add_token(lexer, create_token(kind, text));
+	lexer_next(lexer);
 	lexer_next(lexer);
 }
 
@@ -140,6 +148,7 @@ void lexer_skip_comment(Lexer *lexer) {
 		while (lexer->c != '\n') {
 			lexer_next(lexer);
 		}
+		lexer->line_num++;
 	}
 }
 
@@ -177,16 +186,23 @@ void lexer_lex(Lexer *lexer) {
 			make_single_char_token(lexer, T_COMMA, ",");
 		} else if (lexer->c == '+') {
 			make_single_char_token(lexer, T_PLUS, "+");
+		} else if (lexer->c == ':') {
+			make_single_char_token(lexer, T_COLON, ":");
 		} else if (lexer->c == '-') {
 			if (lexer->source[lexer->idx+1] == '-') {
 				lexer_skip_comment(lexer);
+			} else if (lexer->source[lexer->idx+1] == '>') {
+				make_two_chars_token(lexer, T_RARROW, "->");
 			} else {
 				make_single_char_token(lexer, T_MINUS, "-");
 			}
 		} else {
 			lexer_next(lexer);
+			//char msg[100];
+			//sprintf(msg,"Unexpected character: \"%c\"\n", lexer->c);
+			//carrot_log_error(msg, "idklol", lexer->line_num);
+			//exit(1);
 		}
-
 	}
 	lexer_add_token(lexer, create_token(T_EOF, "EOF"));
 }

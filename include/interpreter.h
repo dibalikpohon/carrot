@@ -28,6 +28,13 @@ typedef struct CarrotObj_t {
 	/* Common properties */
 	sds                 repr;
 	char	            *hash;
+
+	/* Object builtin methods */
+	struct CarrotObj_t  **members;
+	struct CarrotObj_t  *(*__add)(struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__subtact)(struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__mult)(struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__div)(struct CarrotObj_t *other);
 } CarrotObj;
 
 

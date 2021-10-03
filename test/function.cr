@@ -1,4 +1,4 @@
--- A simple function that takes two arguments
+-- A simple function that an argument
 echo: func(text: str) -> int:
 	return text
 end
@@ -34,7 +34,3 @@ end
 
 outer()
 
-
---iter {1 ... 2} as num, @i:
---	println("The value at index ", i, " is ", num)
---end

@@ -12,6 +12,8 @@
 typedef struct Node_t Node;
 
 typedef enum {
+	N_BINOP,
+	N_UNOP,
 	N_FUNC_DEF,
 	N_FUNC_CALL,
 	N_ITER,
@@ -46,6 +48,11 @@ typedef struct Node_t {
 	struct Node_t      *obj_val;
 	Token              value_token; // shared with variable definition node
 	struct Node_t      **list_items; // if a list. TODO: more consistent naming
+
+	/* binary operation node */
+	struct Node_t      *left;
+	struct Node_t      *right;
+	char               op_str[3]; // assuming longest op string of 3
 
 	/* statements node */
 	struct Node_t      **statements;

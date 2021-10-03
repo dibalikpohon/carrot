@@ -15,6 +15,11 @@ typedef struct CarrotObj_t {
 
 	struct CarrotObj_t  **list_items;
 
+	/* Value properties */
+	struct CarrotObj_t  *self;
+	int                 int_val;
+	float               float_val;
+
 	/* Function call object properties */
 	struct CarrotObj_t  *(*builtin_func)(struct CarrotObj_t **args);
 	int                 is_builtin;
@@ -31,10 +36,14 @@ typedef struct CarrotObj_t {
 
 	/* Object builtin methods */
 	struct CarrotObj_t  **members;
-	struct CarrotObj_t  *(*__add)(struct CarrotObj_t *other);
-	struct CarrotObj_t  *(*__subtact)(struct CarrotObj_t *other);
-	struct CarrotObj_t  *(*__mult)(struct CarrotObj_t *other);
-	struct CarrotObj_t  *(*__div)(struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__add)(struct CarrotObj_t *self, 
+			              struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__subtract)(struct CarrotObj_t *self,
+	                                   struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__mult)(struct CarrotObj_t *self,
+	                               struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__div)(struct CarrotObj_t *self,
+	                              struct CarrotObj_t *other);
 } CarrotObj;
 
 
@@ -54,6 +63,7 @@ Interpreter create_interpreter();
 CarrotObj *interpreter_init(Interpreter *interpreter, Node *node);
 CarrotObj *interpreter_interpret(Interpreter *interpreter, Node *node);
 CarrotObj *interpreter_visit(Interpreter *context, Node *node);
+CarrotObj *interpreter_visit_binop(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_func_call(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_func_def(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_iter(Interpreter *context, Node *node);

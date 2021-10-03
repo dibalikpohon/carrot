@@ -172,7 +172,13 @@ void lexer_lex(Lexer *lexer) {
 		} else if (lexer->c == '+') {
 			make_single_char_token(lexer, T_PLUS, "+");
 			continue;
-		} else if (lexer->c == ':') {
+		} else if (lexer->c == '*') {
+			make_single_char_token(lexer, T_MULT, "*");
+			continue;
+		} else if (lexer->c == '/') {
+			make_single_char_token(lexer, T_DIV, "/");
+			continue;
+		}else if (lexer->c == ':') {
 			make_single_char_token(lexer, T_COLON, ":");
 			continue;
 		} else if (lexer->c == '@') {

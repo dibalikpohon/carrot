@@ -32,6 +32,9 @@ void free_node(Node *node) {
 	int len = arrlen(NODE_TRACKING_ARR);
 	for (int i = 0; i < len; i++) {
 		Node *n = NODE_TRACKING_ARR[i];
+		n->iterable = NULL;
+		n->loop_statements = NULL;
+
 		if (n->list_items != NULL) arrfree(n->list_items);
 		if (n->func_args != NULL) arrfree(n->func_args);
 		if (n->func_statements != NULL) arrfree(n->func_statements);
@@ -69,7 +72,18 @@ Node *parser_parse(Parser *parser) {
 Node *parser_parse_arith(Parser *parser) {
 	Node *left = parser_parse_term(parser);
 
-	while (parser->current_token.tok_kind == T_PLUS) {
+	while (parser->current_token.tok_kind == T_PLUS ||
+	       parser->current_token.tok_kind == T_MINUS) {
+		Node *binop_node = init_node();
+		strcpy(binop_node->op_str, parser->current_token.text);
+
+		parser_consume(parser);
+		Node *right = parser_parse_term(parser);
+
+		binop_node->type = N_BINOP;
+		binop_node->left = left;
+		binop_node->right = right;
+		left = binop_node;
 	}
 
 	return left;
@@ -232,10 +246,12 @@ Node *parser_parse_function_param(Parser *parser) {
 }
 
 Node *parser_parse_identifier(Parser *parser) {
-	/* 3 possibilities:
-	 * - variable declaration with dtype
-	 * - variable declaration
-	 * - variable access
+	/* Possibilities:
+	 * - Function definition
+	 * - Variable declaration
+	 * - Function call
+	 * - Variable assignment
+	 * - Variable access
 	 */
 	Token id_token = parser_consume(parser);
 	Token next_token = parser->current_token; //parser_consume(parser);
@@ -251,7 +267,6 @@ Node *parser_parse_identifier(Parser *parser) {
 		}
 
 		/* Handle variable declaration */
-
 		if (parser->current_token.tok_kind == T_EQUAL) {
 			/* The variable is initialized with some value 
 			 * since we found equal char
@@ -277,7 +292,6 @@ Node *parser_parse_identifier(Parser *parser) {
 	} else if (next_token.tok_kind == T_LPAREN) {
 		parser_consume(parser);
 		/* Handle function call */
-
 		Node **args = NULL;
 
 		if (parser->current_token.tok_kind == T_RPAREN) {
@@ -436,7 +450,18 @@ Node *parser_parse_statement(Parser *parser) {
 Node *parser_parse_term(Parser *parser) {
 	Node *left = parser_parse_factor(parser);
 
-	while (parser->current_token.tok_kind == T_MULT) {
+	while (parser->current_token.tok_kind == T_MULT ||
+	       parser->current_token.tok_kind == T_DIV) {
+		Node *binop_node = init_node();
+		strcpy(binop_node->op_str, parser->current_token.text);
+
+		parser_consume(parser);
+		Node *right = parser_parse_factor(parser);
+
+		binop_node->type = N_BINOP;
+		binop_node->left = left;
+		binop_node->right = right;
+		left = binop_node;
 	}
 
 	return left;

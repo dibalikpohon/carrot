@@ -90,8 +90,23 @@ void make_string(Lexer *lexer) {
 	char s[MAX_TOKEN_TEXT_LEN] = "";
 	int i = 0;
 	while (lexer->c != '"') {
-		s[i++] = lexer->c;
-		lexer_next(lexer);
+		if (lexer->c == '\\') {
+			/* Capture escape sequence */
+			lexer_next(lexer);
+			switch (lexer->c) {
+				case 'n':
+					s[i++] = '\n';
+					break;
+				case 't':
+					s[i++] = '\t';
+					break;
+				// TODO: more cases
+			}
+			lexer_next(lexer);
+		} else {
+			s[i++] = lexer->c;
+			lexer_next(lexer);
+		}
 	}
 	
 	// found enclosing delimiter

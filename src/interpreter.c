@@ -70,6 +70,10 @@ CarrotObj *interpreter_visit_binop(Interpreter *context, Node *node) {
 		if (left->__ge != NULL) return left->__ge(left, right);
 	} else if (strcmp(node->op_str, "<=") == 0) {
 		if (left->__le != NULL) return left->__le(left, right);
+	} else if (strcmp(node->op_str, "&&") == 0) {
+		if (left->__and != NULL) return left->__and(left, right);
+	} else if (strcmp(node->op_str, "||") == 0) {
+		if (left->__or != NULL) return left->__or(left, right);
 	}  
 
 	printf("ERROR: operator %s is not defined for type %s and %s\n",
@@ -214,8 +218,10 @@ CarrotObj *interpreter_visit_value(Interpreter *context, Node *node) {
 		return carrot_int(node->int_val);
 	} else if (node->var_type == DT_FLOAT) {
 		return carrot_float(node->float_val);
+	} else if (node->var_type == DT_BOOL) {
+		return carrot_bool(node->bool_val);
 	} else if (node->var_type == DT_NULL) {
-		return carrot_null();
+		return carrot_null(node->bool_val);
 	} else if (node->var_type == DT_LIST) {
 		CarrotObj **list_items = NULL;
 		for (int i = 0; i < arrlen(node->list_items); i++) {
@@ -458,6 +464,22 @@ CarrotObj *__float_le(CarrotObj *self, CarrotObj *other) {
 	exit(1);
 }
 
+CarrotObj *__bool_and(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "bool") == 0) {
+		return carrot_bool(self->bool_val && other->bool_val);
+	} 
+	printf("ERROR: Cannot use \"&&\" on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__bool_or(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "bool") == 0) {
+		return carrot_bool(self->bool_val || other->bool_val);
+	} 
+	printf("ERROR: Cannot use \"||\" on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
 CarrotObj *carrot_obj_allocate() {
 	CarrotObj *obj = calloc(1, sizeof(CarrotObj));
 
@@ -505,6 +527,8 @@ CarrotObj *carrot_bool(int bool_val) {
 	obj->repr = sdscatprintf(sdsempty(),
 			         "%s",
 				 bool_val == 1 ? "true" : "false");
+	obj->__and = __bool_and;
+	obj->__or = __bool_or;
 	return obj;
 }
 

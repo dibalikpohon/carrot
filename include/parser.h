@@ -30,7 +30,7 @@ typedef enum {
 } node_type_t;
 
 typedef enum {
-	DT_STR, DT_INT, DT_FLOAT, DT_LIST, DT_NULL, DT_UNKNOWN
+	DT_STR, DT_INT, DT_FLOAT, DT_BOOL, DT_LIST, DT_NULL, DT_UNKNOWN
 } data_type_t;
 
 
@@ -46,6 +46,7 @@ typedef struct Node_t {
 	int                int_val;
 	float              float_val;
 	char               str_val[MAX_STR_LITERAL_LEN];
+	int                bool_val;
 	struct Node_t      *obj_val;
 	Token              value_token; // shared with variable definition node
 	struct Node_t      **list_items; // if a list. TODO: more consistent naming

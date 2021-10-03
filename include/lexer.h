@@ -14,7 +14,7 @@ typedef enum {
 	/* Logical */
 	T_EE, T_GT, T_LT, T_GE, T_LE, T_NE,
 	/* Boolean operator */
-	T_AND, T_OR,
+	T_AND, T_OR, T_NOT,
 	/* Assignment */
 	T_EQUAL, T_COLON, T_RARROW,
 	/* Parentheses, brackets, etc. */

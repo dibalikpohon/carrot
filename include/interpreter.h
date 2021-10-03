@@ -37,6 +37,9 @@ typedef struct CarrotObj_t {
 
 	/* Object builtin methods */
 	struct CarrotObj_t  **members;
+	struct CarrotObj_t  *(*__plus)(struct CarrotObj_t *self);
+	struct CarrotObj_t  *(*__negate)(struct CarrotObj_t *self);
+	struct CarrotObj_t  *(*__not)(struct CarrotObj_t *self);
 	struct CarrotObj_t  *(*__add)(struct CarrotObj_t *self, 
 			              struct CarrotObj_t *other);
 	struct CarrotObj_t  *(*__subtract)(struct CarrotObj_t *self,
@@ -54,6 +57,10 @@ typedef struct CarrotObj_t {
 	struct CarrotObj_t  *(*__gt)(struct CarrotObj_t *self,
 	                             struct CarrotObj_t *other);
 	struct CarrotObj_t  *(*__lt)(struct CarrotObj_t *self,
+	                             struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__and)(struct CarrotObj_t *self,
+	                              struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__or)(struct CarrotObj_t *self,
 	                             struct CarrotObj_t *other);
 } CarrotObj;
 

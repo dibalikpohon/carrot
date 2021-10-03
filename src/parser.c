@@ -93,6 +93,20 @@ Node *parser_parse_atom(Parser *parser) {
 	tok_kind_t kind = parser->current_token.tok_kind;
 
 	if (kind == T_ID) {
+		if (strcmp(parser->current_token.text, "true") == 0 ||
+		    strcmp(parser->current_token.text, "false") == 0) {
+			Node *val_node = init_node();
+			val_node->type = N_LITERAL;
+			val_node->var_type = DT_BOOL;
+			if (strcmp(parser->current_token.text, "true") == 0) {
+				val_node->bool_val = 1;
+			} else {
+				val_node->bool_val = 0;
+			}
+			parser_consume(parser);
+			return val_node;
+		} 
+
 		/* Parse identifier */
 		return parser_parse_identifier(parser);
 	} else if (kind == T_STR ||
@@ -174,7 +188,20 @@ Node *parser_parse_expression(Parser *parser) {
 	Node *left = parser_parse_com(parser);
 
 	/* and, or, ... */
+	while (parser->current_token.tok_kind == T_AND ||
+	       parser->current_token.tok_kind == T_OR) {
+		Node *binop_node = init_node();
+		strcpy(binop_node->op_str, parser->current_token.text);
 
+		parser_consume(parser);
+		Node *right = parser_parse_term(parser);
+
+		binop_node->type = N_BINOP;
+		binop_node->left = left;
+		binop_node->right = right;
+		left = binop_node;
+	}
+	
 	return left;
 }
 

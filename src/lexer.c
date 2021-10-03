@@ -187,6 +187,23 @@ void lexer_lex(Lexer *lexer) {
 				make_single_char_token(lexer, T_LT, "<");
 			}
 			continue;
+		} else if (lexer->c == '!') {
+			if (lexer->source[lexer->idx+1] == '=') {
+				make_two_chars_token(lexer, T_NE, "!=");
+			} else {
+				make_single_char_token(lexer, T_NOT, "!");
+			}
+			continue;
+		} else if (lexer->c == '|') {
+			if (lexer->source[lexer->idx+1] == '|') {
+				make_two_chars_token(lexer, T_OR, "||");
+			}
+			continue;
+		} else if (lexer->c == '&') {
+			if (lexer->source[lexer->idx+1] == '&') {
+				make_two_chars_token(lexer, T_AND, "&&");
+			}
+			continue;
 		} else if (lexer->c == '(') {
 			make_single_char_token(lexer, T_LPAREN, "(");
 			continue;

@@ -16,6 +16,7 @@ typedef enum {
 	N_UNOP,
 	N_FUNC_DEF,
 	N_FUNC_CALL,
+	N_GET_ITEM,
 	N_ITER,
 	N_LITERAL, 
 	N_NULL,

@@ -93,10 +93,12 @@ Node *parser_parse_atom(Parser *parser) {
 	tok_kind_t kind = parser->current_token.tok_kind;
 
 	if (kind == T_ID) {
+		/* Parse identifier */
 		return parser_parse_identifier(parser);
 	} else if (kind == T_STR ||
 		   kind == T_INT ||
 		   kind == T_FLOAT) {
+		/* Parse literals */
 		Node *val_node = init_node();
 		val_node->type = N_LITERAL;
 		val_node->value_token = parser->current_token;
@@ -113,7 +115,18 @@ Node *parser_parse_atom(Parser *parser) {
 		}
 		parser_consume(parser);
 		return val_node;
+	} else if (kind == T_LPAREN) {
+		/* Parse parenthesized expression */
+		parser_consume(parser);
+		Node *expr = parser_parse_expression(parser);
+		if (parser->current_token.tok_kind != T_RPAREN) {
+			printf("ERROR: Enclosing parenthesis expected\n");
+			exit(1);
+		}
+		parser_consume(parser);
+		return expr;
 	} else if (kind == T_LBRACKET) {
+		/* Parse list */
 		return parser_parse_list(parser);
 	}
 	printf("ERROR: literal or expression expected\n");

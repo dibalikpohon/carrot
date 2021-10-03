@@ -23,14 +23,18 @@ CarrotObj *interpreter_visit(Interpreter *context, Node *node) {
 			return interpreter_visit_func_call(context, node);
 		case N_STATEMENTS:
 			return interpreter_visit_statements(context, node);
-		case N_VAR_DEF:
-			return interpreter_visit_var_def(context, node);
 		case N_VAR_ACCESS:
 			return interpreter_visit_var_access(context, node);
+		case N_VAR_ASSIGN:
+			return interpreter_visit_var_assign(context, node);
+		case N_VAR_DEF:
+			return interpreter_visit_var_def(context, node);
 		case N_LITERAL:
 			return interpreter_visit_value(context, node);
 		case N_FUNC_DEF: 
 			return interpreter_visit_func_def(context, node);
+		case N_ITER:
+			return interpreter_visit_iter(context, node);
 		case N_RETURN: 
 			return interpreter_visit_return(context, node);
 		// TODO: complete missing cases
@@ -126,10 +130,34 @@ CarrotObj *interpreter_visit_func_def(Interpreter *context, Node *node) {
 	function->func_statements = node->func_statements;
 	strcpy(function->func_name, node->func_name);
 	for (int i = 0; i < arrlen(node->func_params); i++) {
-		//printf("%s\n", node->func_params[i]->param_name);
 		arrput(function->func_arg_names, node->func_params[i]->param_name);
 	}
 	shput(context->sym_table, node->func_name, function);
+	return carrot_null();
+}
+
+CarrotObj *interpreter_visit_iter(Interpreter *context, Node *node) {
+	CarrotObj *iterable = interpreter_visit(context, node->iterable);
+	int iterable_len = arrlen(iterable->list_items);
+	char *loop_iterator_var_name = node->loop_iterator_var_name;
+	char *loop_index_var_name = node->loop_index_var_name;
+	Interpreter local_interpreter = create_interpreter();
+	local_interpreter.parent = context;
+
+	for (int i = 0; i < iterable_len; i++) {
+		shput(local_interpreter.sym_table,
+		      loop_iterator_var_name,
+		      iterable->list_items[i]);
+		if (node->loop_with_index)
+			shput(local_interpreter.sym_table,
+			      loop_index_var_name,
+			      carrot_int(i));
+		for (int j = 0; j < arrlen(node->loop_statements); j++)
+			interpreter_visit(&local_interpreter,
+				          node->loop_statements[j]);
+	}
+	/* TODO: free local variables */
+	interpreter_free(&local_interpreter);
 	return carrot_null();
 }
 
@@ -189,10 +217,31 @@ CarrotObj *interpreter_visit_var_access(Interpreter *context, Node *node) {
 	return obj;
 }
 
+CarrotObj *interpreter_visit_var_assign(Interpreter *context, Node *node) {
+	CarrotObj *existing_var_content = shget(context->sym_table, node->var_name);
+	if (existing_var_content != NULL) {
+		/* remove existing_var_content from context's local symbol table and
+		 * global tracker */
+		shdel(context->sym_table, node->var_name);
+
+		/* TODO Remove the existing variable content itself */
+		// shdel(CARROT_TRACKING_ARR, existing_var_content->hash);
+	}
+	CarrotObj *var_content = interpreter_visit(context, node->var_node);
+	shput(context->sym_table, node->var_name, var_content);
+	return var_content;
+}
+
 CarrotObj *interpreter_visit_var_def(Interpreter *context, Node *node) {
-	CarrotObj *obj = interpreter_visit(context, node->var_node);
-	shput(context->sym_table, node->var_name, obj);
-	return carrot_null();
+	if (shget(context->sym_table, node->var_name) != NULL) {
+		printf("ERROR: variable redefinition in the same scope: %s\n", 
+		       node->var_name);
+		exit(1);
+	}
+	CarrotObj *var_content = interpreter_visit(context, node->var_node);
+	shput(context->sym_table, node->var_name, var_content);
+
+	return var_content;
 }
 
 CarrotObj *carrot_obj_allocate() {

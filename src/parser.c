@@ -21,6 +21,8 @@ Node *init_node() {
 	n->func_params = NULL;
 	n->func_statements = NULL;
 	n->func_args = NULL;
+	n->iterable = NULL;
+	n->loop_statements = NULL;
 	n->return_value = NULL;
 	arrput(NODE_TRACKING_ARR, n);
 	return n;
@@ -34,6 +36,7 @@ void free_node(Node *node) {
 		if (n->func_args != NULL) arrfree(n->func_args);
 		if (n->func_statements != NULL) arrfree(n->func_statements);
 		if (n->func_params != NULL) arrfree(n->func_params);
+		if (n->loop_statements != NULL) arrfree(n->loop_statements);
 		free(n);
 	}
 	arrfree(NODE_TRACKING_ARR);
@@ -269,7 +272,6 @@ Node *parser_parse_identifier(Parser *parser) {
 				vardef_node->var_type = DT_FLOAT;
 			}
 
-
 			return vardef_node;
 		} 
 	} else if (next_token.tok_kind == T_LPAREN) {
@@ -292,6 +294,7 @@ Node *parser_parse_identifier(Parser *parser) {
 			}
 			if (parser->current_token.tok_kind != T_RPAREN) {
 				printf("ERROR: \")\" expected.\n");
+				exit(1);
 			}
 			
 			// consume R_PAREN
@@ -305,6 +308,12 @@ Node *parser_parse_identifier(Parser *parser) {
 		return obj;
 	} else if (next_token.tok_kind == T_EQUAL) {
 		/* Handle assignment */
+		parser_consume(parser);
+		Node *var_assign = init_node();
+		var_assign->type = N_VAR_ASSIGN;
+		var_assign->var_node = parser_parse_expression(parser);
+		strcpy(var_assign->var_name, id_token.text);
+		return var_assign;
 	} else {
 		/* Handle variable access */
 		Node *obj = init_node();
@@ -318,8 +327,57 @@ Node *parser_parse_identifier(Parser *parser) {
 	exit(1);
 }
 
-Node *parser_parse_keyword(Parser *parser) {
-	exit(1);	
+Node *parser_parse_iter(Parser *parser) {
+	parser_consume(parser);
+
+	Node *iterable = parser_parse_expression(parser);
+
+	if (strcmp(parser->current_token.text, "as") != 0) {
+		printf("ERROR: Expected \"as\"");
+		exit(1);
+	}
+	parser_consume(parser);
+
+	Node *iter_node = init_node();
+	strcpy(iter_node->loop_iterator_var_name, parser->current_token.text);
+
+	parser_consume(parser);
+
+	Node **loop_statements = NULL;
+	if (parser->current_token.tok_kind == T_COLON) {
+		/* Case 1: iter loop WITHOUT index reference */
+		parser_consume(parser); //just continue to the next token
+		iter_node->loop_with_index = 0;
+	} else if (parser->current_token.tok_kind == T_AT) {
+		/* Case 1: iter loop WITH index reference */
+		parser_consume(parser);
+		if (parser->current_token.tok_kind != T_ID) {
+			printf("ERROR: Identifier expected for index reference");
+			exit(1);
+		}
+		iter_node->loop_with_index = 1;
+		strcpy(iter_node->loop_index_var_name, parser->current_token.text);
+		parser_consume(parser);
+
+		if (parser->current_token.tok_kind != T_COLON) {
+			printf("ERROR: Syntax error: colon is expected\n");
+		}
+		parser_consume(parser);
+	} else {
+		printf("ERROR: Syntax error: colon or index reference is expected\n");
+		exit(1);
+	}
+
+	while (strcmp(parser->current_token.text, "end") != 0) {
+		arrput(loop_statements, parser_parse_statement(parser));
+	}
+	parser_consume(parser); // consume "end" token
+
+	iter_node->type = N_ITER;
+	iter_node->loop_statements = loop_statements;
+	iter_node->iterable = iterable;
+
+	return iter_node;
 }
 
 Node *parser_parse_list(Parser *parser) {
@@ -369,6 +427,9 @@ Node *parser_parse_script(Parser *parser) {
 }
 
 Node *parser_parse_statement(Parser *parser) {
+	if (strcmp(parser->current_token.text, "iter") == 0) {
+		return parser_parse_iter(parser);
+	} 
 	return parser_parse_expression(parser);
 }
 

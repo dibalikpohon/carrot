@@ -12,13 +12,18 @@
 typedef struct Node_t Node;
 
 typedef enum {
-	/* literals */
+	N_FUNC_DEF,
+	N_FUNC_CALL,
+	N_ITER,
 	N_LITERAL, 
-	/* statement */
-	N_STATEMENT, N_STATEMENTS,
-	N_VAR_DEF, N_VAR_ACCESS, N_FUNC_DEF, N_FUNC_CALL,
-	N_RETURN, N_NULL,
-	N_UNKNOWN
+	N_NULL,
+	N_RETURN,
+	N_STATEMENT,
+	N_STATEMENTS,
+	N_UNKNOWN,
+	N_VAR_DEF,
+	N_VAR_ASSIGN,
+	N_VAR_ACCESS,
 } node_type_t;
 
 typedef enum {
@@ -57,6 +62,13 @@ typedef struct Node_t {
 	struct Node_t      **func_params;
 	struct Node_t      **func_statements;
 
+	/* loop node */
+	struct Node_t      *iterable;
+	struct Node_t      **loop_statements;
+	char               loop_index_var_name[MAX_VAR_NAME_LEN];
+	char               loop_iterator_var_name[MAX_VAR_NAME_LEN];
+	int                loop_with_index;
+
 	/* function param node */
 	char               param_name[MAX_VAR_NAME_LEN];
 
@@ -90,7 +102,7 @@ Node *parser_parse_factor(Parser *parser);
 Node *parser_parse_function_def(Parser *parser, Token id_token);
 Node *parser_parse_function_param(Parser *parser);
 Node *parser_parse_identifier(Parser *parser);
-Node *parser_parse_keyword(Parser *parser);
+Node *parser_parse_iter(Parser *parser);
 Node *parser_parse_list(Parser *parser);
 Node *parser_parse_literal(Parser *parser);
 Node *parser_parse_power(Parser *parser);

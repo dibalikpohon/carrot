@@ -60,7 +60,17 @@ CarrotObj *interpreter_visit_binop(Interpreter *context, Node *node) {
 		if (left->__mult != NULL) return left->__mult(left, right);
 	} else if (strcmp(node->op_str, "/") == 0) {
 		if (left->__div != NULL) return left->__div(left, right);
-	}
+	} else if (strcmp(node->op_str, "==") == 0) {
+		if (left->__ee != NULL) return left->__ee(left, right);
+	} else if (strcmp(node->op_str, ">") == 0) {
+		if (left->__gt != NULL) return left->__gt(left, right);
+	} else if (strcmp(node->op_str, "<") == 0) {
+		if (left->__lt != NULL) return left->__lt(left, right);
+	} else if (strcmp(node->op_str, ">=") == 0) {
+		if (left->__ge != NULL) return left->__ge(left, right);
+	} else if (strcmp(node->op_str, "<=") == 0) {
+		if (left->__le != NULL) return left->__le(left, right);
+	}  
 
 	printf("ERROR: operator %s is not defined for type %s and %s\n",
 	       node->op_str, left->type_str, right->type_str);
@@ -270,7 +280,6 @@ CarrotObj *__int_add(CarrotObj *self, CarrotObj *other) {
 	} else if (strcmp(other->type_str, "float") == 0) {
 		return carrot_float(self->int_val + other->float_val);
 	}
-
 	printf("ERROR: Cannot perform addition on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
@@ -281,7 +290,6 @@ CarrotObj *__int_subtract(CarrotObj *self, CarrotObj *other) {
 	} else if (strcmp(other->type_str, "float") == 0) {
 		return carrot_float(self->int_val - other->float_val);
 	}
-
 	printf("ERROR: Cannot perform subtraction on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
@@ -292,7 +300,6 @@ CarrotObj *__int_mult(CarrotObj *self, CarrotObj *other) {
 	} else if (strcmp(other->type_str, "float") == 0) {
 		return carrot_float(self->int_val * other->float_val);
 	}
-
 	printf("ERROR: Cannot perform multiplication on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
@@ -303,8 +310,57 @@ CarrotObj *__int_div(CarrotObj *self, CarrotObj *other) {
 	} else if (strcmp(other->type_str, "float") == 0) {
 		return carrot_float((float)self->int_val / other->float_val);
 	}
-
 	printf("ERROR: Cannot perform division on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_ee(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val == other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val == other->float_val);
+	}
+	printf("ERROR: Cannot perform \"equal to\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_gt(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val > other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val > other->float_val);
+	}
+	printf("ERROR: Cannot perform \">\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_lt(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val < other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val < other->float_val);
+	}
+	printf("ERROR: Cannot perform \"<\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_ge(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val >= other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val >= other->float_val);
+	}
+	printf("ERROR: Cannot perform \">=\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_le(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val <= other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val <= other->float_val);
+	}
+	printf("ERROR: Cannot perform \"<=\" comparison on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
 
@@ -351,6 +407,57 @@ CarrotObj *__float_div(CarrotObj *self, CarrotObj *other) {
 	printf("ERROR: Cannot perform division on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
+
+CarrotObj *__float_ee(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val == other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val == other->float_val);
+	}
+	printf("ERROR: Cannot perform \"==\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_gt(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val > other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val > other->float_val);
+	}
+	printf("ERROR: Cannot perform \">\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_lt(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val < other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val < other->float_val);
+	}
+	printf("ERROR: Cannot perform \"<\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_ge(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val >= other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val >= other->float_val);
+	}
+	printf("ERROR: Cannot perform \">=\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_le(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val <= other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val <= other->float_val);
+	}
+	printf("ERROR: Cannot perform \"<=\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
 CarrotObj *carrot_obj_allocate() {
 	CarrotObj *obj = calloc(1, sizeof(CarrotObj));
 
@@ -390,6 +497,16 @@ CarrotObj *carrot_get_var(char *var_name, Interpreter *context) {
 	return NULL;
 }
 
+CarrotObj *carrot_bool(int bool_val) {
+	CarrotObj *obj = carrot_obj_allocate();
+	obj->type = CARROT_BOOL;
+	obj->bool_val = bool_val;
+	obj->type_str = sdsnew("bool");
+	obj->repr = sdscatprintf(sdsempty(),
+			         "%s",
+				 bool_val == 1 ? "true" : "false");
+	return obj;
+}
 
 CarrotObj *carrot_int(int int_val) {
 	CarrotObj *obj = carrot_obj_allocate();
@@ -401,6 +518,11 @@ CarrotObj *carrot_int(int int_val) {
 	obj->__subtract = __int_subtract;
 	obj->__mult = __int_mult;
 	obj->__div = __int_div;
+	obj->__ee = __int_ee;
+	obj->__ge = __int_ge;
+	obj->__le = __int_le;
+	obj->__gt = __int_gt;
+	obj->__lt = __int_lt;
 	return obj;
 }
 
@@ -433,6 +555,15 @@ CarrotObj *carrot_float(float float_val) {
 	obj->float_val = float_val;
 	obj->type_str = sdsnew("float");
 	obj->repr = sdscatprintf(sdsempty(), "%f", float_val);
+	obj->__add = __float_add;
+	obj->__subtract = __float_subtract;
+	obj->__mult = __float_mult;
+	obj->__div = __float_div;
+	obj->__ee = __float_ee;
+	obj->__ge = __float_ge;
+	obj->__le = __float_le;
+	obj->__gt = __float_gt;
+	obj->__lt = __float_lt;
 	return obj;
 }
 

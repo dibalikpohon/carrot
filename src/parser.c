@@ -149,7 +149,23 @@ Node *parser_parse_com(Parser *parser) {
 	Node *left = parser_parse_arith(parser);
 
 	// 2) parse ==, >, <, >=, <=
-	// ...
+	while (parser->current_token.tok_kind == T_EE ||
+	       parser->current_token.tok_kind == T_GT ||
+	       parser->current_token.tok_kind == T_LT ||
+	       parser->current_token.tok_kind == T_GE ||
+	       parser->current_token.tok_kind == T_LE ||
+	       parser->current_token.tok_kind == T_NE) {
+		Node *binop_node = init_node();
+		strcpy(binop_node->op_str, parser->current_token.text);
+
+		parser_consume(parser);
+		Node *right = parser_parse_term(parser);
+
+		binop_node->type = N_BINOP;
+		binop_node->left = left;
+		binop_node->right = right;
+		left = binop_node;
+	}
 	
 	return left;
 }

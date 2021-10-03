@@ -5,8 +5,8 @@
 #include "../lib/include/sds.h"
 
 typedef enum {
-	CARROT_STR, CARROT_INT, CARROT_FLOAT, CARROT_LIST, CARROT_NULL,
-	CARROT_FUNCTION,
+	CARROT_STR, CARROT_INT, CARROT_FLOAT, CARROT_BOOL, CARROT_LIST,
+	CARROT_NULL, CARROT_FUNCTION,
 } carrot_dtype_t;
 
 typedef struct CarrotObj_t {
@@ -17,6 +17,7 @@ typedef struct CarrotObj_t {
 
 	/* Value properties */
 	struct CarrotObj_t  *self;
+	int                 bool_val;
 	int                 int_val;
 	float               float_val;
 
@@ -44,6 +45,16 @@ typedef struct CarrotObj_t {
 	                               struct CarrotObj_t *other);
 	struct CarrotObj_t  *(*__div)(struct CarrotObj_t *self,
 	                              struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__ee)(struct CarrotObj_t *self,
+	                             struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__ge)(struct CarrotObj_t *self,
+	                             struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__le)(struct CarrotObj_t *self,
+	                             struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__gt)(struct CarrotObj_t *self,
+	                             struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__lt)(struct CarrotObj_t *self,
+	                             struct CarrotObj_t *other);
 } CarrotObj;
 
 
@@ -79,6 +90,7 @@ CarrotObj *carrot_obj_allocate();
 CarrotObj *carrot_noop();
 CarrotObj *carrot_null();
 CarrotObj *carrot_get_var(char *var_name, Interpreter *context);
+CarrotObj *carrot_bool(int bool_val);
 CarrotObj *carrot_int(int int_val);
 CarrotObj *carrot_list(CarrotObj **list_items);
 CarrotObj *carrot_float(float float_val);

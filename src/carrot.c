@@ -20,7 +20,7 @@ char *read_source_file(char *filename) {
 	int size = ftell(file);
 	fseek(file, 0, SEEK_SET);
 
-	source = (char*) calloc(1, sizeof(char) * (size + 1));
+	source = (char*) calloc(sizeof(char) * (size + 1), sizeof(char));
 	fread(source, 1, size, file);
 	source[size] = '\0';
 

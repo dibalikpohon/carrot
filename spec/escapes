@@ -1,0 +1,8 @@
+"\\""r",   // carriage return(?)
+"\\""n",   // newline
+
+"\\""\\",   // backslash
+"\\""'",   // single quote
+"\\""\"",  // double quote
+
+"\\""t",   // Tab

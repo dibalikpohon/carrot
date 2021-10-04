@@ -22,6 +22,39 @@ int is_keyword(char *s) {
 	return found;
 }
 
+int is_escape(char* s) {
+	const int n_escape = 6;
+	char escapes[6][3] = {
+		#include "../spec/escapes"
+	};
+
+	for (int i = 0; i < n_escape; i++) {
+		if (strcmp(s, escapes[i]) == 0) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+/* I think make_escape is not used by anywhere
+   except this translation unit so i marked this
+   function as static
+
+   By now, escape character only support single char
+*/
+static char make_escape(char* s) {
+	switch(s[1]) {
+		case 'r' : return '\r';
+		case 'n' : return '\n';
+		case '\\': return '\\';
+		case '\'': return '\'';
+		case '"' : return '"';
+		case 't' : return '\t';
+	}
+	return 0; // is not found
+}
+
 char *tok_kind_to_str(tok_kind_t kind) {
 	switch (kind) {
 		case T_INT: return "T_INT";
@@ -50,7 +83,7 @@ char *tok_kind_to_str(tok_kind_t kind) {
 Token create_token(tok_kind_t tok_kind, char *text) {
 	Token t;
 	t.tok_kind = tok_kind;
-	strcpy(t.text, text);
+	strncpy(t.text, text, MAX_TOKEN_TEXT_LEN);
 	return t;
 }
 
@@ -115,7 +148,23 @@ void make_string(Lexer *lexer) {
 	char s[MAX_TOKEN_TEXT_LEN] = "";
 	int i = 0;
 	while (lexer->c != '"') {
-		s[i++] = lexer->c;
+		if (lexer->c == '\\') {
+			/* Scan for escape characters */
+			/* Case that should be taken care of:
+			   lexer->source[++lexer->idx] pasts the array
+			*/
+			char e[3] = {lexer->c, lexer->source[++lexer->idx], 0};
+			if (is_escape(e)) {
+				s[i++] = make_escape(e);
+				// lexer_next(lexer);
+			}
+			else {
+				fprintf(stderr, "Illegal escape character %s at line %d.\n", e, lexer->line_num);
+				exit(1);
+			}
+		} else {
+			s[i++] = lexer->c;
+		}
 		lexer_next(lexer);
 	}
 	

@@ -39,6 +39,7 @@ typedef struct LEXER {
 } Lexer;
 
 int is_keyword(char *s);
+int is_escape(char* s);
 char *tok_kind_to_str(tok_kind_t kind);
 
 Token create_token(tok_kind_t tok_kind, char *text);
@@ -57,4 +58,3 @@ void lexer_skip_whitespace(Lexer *lexer);
 void lexer_lex(Lexer *lexer);
 
 #endif
-

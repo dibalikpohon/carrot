@@ -12,11 +12,13 @@
 typedef struct Node_t Node;
 
 typedef enum {
+	N_BLOCK,
 	N_BINOP,
 	N_UNOP,
 	N_FUNC_DEF,
 	N_FUNC_CALL,
 	N_GET_ITEM,
+	N_IF,
 	N_ITER,
 	N_LITERAL, 
 	N_NULL,
@@ -59,6 +61,9 @@ typedef struct Node_t {
 	/* statements node */
 	struct Node_t      **statements;
 
+	/* code block node */
+	struct Node_t      **block_statements;
+
 	/* variable definition node */
 	char               var_name[MAX_VAR_NAME_LEN];
 	data_type_t        var_type;
@@ -70,6 +75,15 @@ typedef struct Node_t {
 	int                is_builtin;
 	struct Node_t      **func_params;
 	struct Node_t      **func_statements;
+
+	/* if node */
+	struct Node_t      **conditions;
+	//                 The if_blocks[i] will be executed if
+	//                 conditions[i] is true
+	struct Node_t      **if_blocks;   
+	//                 if none of conditions is true then else_block
+	//                 will be executed
+	struct Node_t      *else_block;
 
 	/* loop node */
 	struct Node_t      *iterable;
@@ -83,7 +97,6 @@ typedef struct Node_t {
 
 	/* function call node */
 	struct Node_t      **func_args;
-
 	struct Node_t      *return_value;
 } Node;
 

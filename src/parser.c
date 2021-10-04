@@ -14,6 +14,10 @@ Node *init_node() {
 	Node *n = malloc(sizeof(Node));
 	n->type = N_UNKNOWN;
 	n->var_type = DT_UNKNOWN;
+	n->block_statements = NULL;
+	n->conditions = NULL;
+	n->if_blocks = NULL;
+	n->else_block = NULL;
 	n->obj_val = NULL;
 	n->list_items = NULL;
 	n->statements = NULL;
@@ -35,6 +39,9 @@ void free_node(Node *node) {
 		n->iterable = NULL;
 		n->loop_statements = NULL;
 
+		if (n->block_statements != NULL) arrfree(n->block_statements);
+		if (n->conditions != NULL) arrfree(n->conditions);
+		if (n->if_blocks != NULL) arrfree(n->if_blocks);
 		if (n->list_items != NULL) arrfree(n->list_items);
 		if (n->func_args != NULL) arrfree(n->func_args);
 		if (n->func_statements != NULL) arrfree(n->func_statements);
@@ -173,7 +180,7 @@ Node *parser_parse_com(Parser *parser) {
 		strcpy(binop_node->op_str, parser->current_token.text);
 
 		parser_consume(parser);
-		Node *right = parser_parse_term(parser);
+		Node *right = parser_parse_arith(parser);
 
 		binop_node->type = N_BINOP;
 		binop_node->left = left;
@@ -194,7 +201,7 @@ Node *parser_parse_expression(Parser *parser) {
 		strcpy(binop_node->op_str, parser->current_token.text);
 
 		parser_consume(parser);
-		Node *right = parser_parse_term(parser);
+		Node *right = parser_parse_com(parser);
 
 		binop_node->type = N_BINOP;
 		binop_node->left = left;
@@ -301,6 +308,19 @@ Node *parser_parse_function_param(Parser *parser) {
 	return param;
 }
 
+Node *parser_parse_block(Parser *parser) {
+	Node *block_node = init_node();
+	block_node->type = N_BLOCK;
+	block_node->block_statements = NULL;
+	while (strcmp(parser->current_token.text, "end") != 0 &&
+	       strcmp(parser->current_token.text, "elif") != 0 &&
+	       strcmp(parser->current_token.text, "else") != 0) {
+		arrput(block_node->block_statements,
+		       parser_parse_statement(parser));
+	}
+	return block_node;
+}
+
 Node *parser_parse_identifier(Parser *parser) {
 	/* Possibilities:
 	 * - Function definition
@@ -397,6 +417,81 @@ Node *parser_parse_identifier(Parser *parser) {
 	exit(1);
 }
 
+Node *parser_parse_if(Parser *parser) {
+	parser_consume(parser);
+
+	//Node *if_block;
+	Node *if_condition_expr = parser_parse_expression(parser);
+	if (parser->current_token.tok_kind != T_COLON) {
+		printf("%s\n", parser->current_token.text);
+		printf("ERROR: Expected \":\"");
+		exit(1);
+	}
+	parser_consume(parser);
+
+	Node *if_node = init_node();
+	if_node->type = N_IF;
+
+	Node **conditions = NULL;
+	Node **if_blocks = NULL;
+	Node *else_block = NULL;
+	arrput(conditions, if_condition_expr);
+	arrput(if_blocks, parser_parse_block(parser));
+
+	if (strcmp(parser->current_token.text, "end") == 0) {
+		parser_consume(parser);
+		/* if end keyword present immediately after if statement
+		 * block, then just return the if_node */
+		if_node->conditions = conditions;
+		if_node->if_blocks = if_blocks;
+		return if_node;
+	}
+
+	if (strcmp(parser->current_token.text, "elif") == 0) {
+		while (strcmp(parser->current_token.text, "elif") == 0) {
+			parser_consume(parser);
+			arrput(conditions, parser_parse_expression(parser));
+			if (parser->current_token.tok_kind != T_COLON) {
+				printf("ERROR: Elif Expected \":\"");
+				exit(1);
+			}
+			parser_consume(parser);
+			
+			arrput(if_blocks, parser_parse_block(parser));
+		}
+	} 
+
+	/* check whether a series of elif is terminated */
+	if (strcmp(parser->current_token.text, "end") == 0) {
+		parser_consume(parser);
+		if_node->conditions = conditions;
+		if_node->if_blocks = if_blocks;
+		return if_node;
+	}
+
+	/* otherwise, if else keyword present, handle it accordingly */
+	if (strcmp(parser->current_token.text, "else") == 0) {
+		parser_consume(parser);
+		if (parser->current_token.tok_kind != T_COLON) {
+			printf("ERROR: Expected \":\"");
+			exit(1);
+		}
+		parser_consume(parser);
+		else_block = parser_parse_block(parser);
+	} 
+
+	if (strcmp(parser->current_token.text, "end") != 0) {
+		printf("ERROR: Expected \"end\"");
+		exit(1);
+	}
+	parser_consume(parser);
+	if_node->conditions = conditions;
+	if_node->if_blocks = if_blocks;
+	if_node->else_block = else_block;
+
+	return if_node;
+}
+
 Node *parser_parse_iter(Parser *parser) {
 	parser_consume(parser);
 
@@ -413,7 +508,6 @@ Node *parser_parse_iter(Parser *parser) {
 
 	parser_consume(parser);
 
-	Node **loop_statements = NULL;
 	if (parser->current_token.tok_kind == T_COLON) {
 		/* Case 1: iter loop WITHOUT index reference */
 		parser_consume(parser); //just continue to the next token
@@ -438,6 +532,7 @@ Node *parser_parse_iter(Parser *parser) {
 		exit(1);
 	}
 
+	Node **loop_statements = NULL;
 	while (strcmp(parser->current_token.text, "end") != 0) {
 		arrput(loop_statements, parser_parse_statement(parser));
 	}
@@ -499,7 +594,9 @@ Node *parser_parse_script(Parser *parser) {
 Node *parser_parse_statement(Parser *parser) {
 	if (strcmp(parser->current_token.text, "iter") == 0) {
 		return parser_parse_iter(parser);
-	} 
+	} else if (strcmp(parser->current_token.text, "if") == 0) {
+		return parser_parse_if(parser);
+	}
 	return parser_parse_expression(parser);
 }
 

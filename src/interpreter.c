@@ -21,8 +21,12 @@ CarrotObj *interpreter_visit(Interpreter *context, Node *node) {
 	switch (node->type) {
 		case N_BINOP:
 			return interpreter_visit_binop(context, node);
+		case N_BLOCK:
+			return interpreter_visit_block(context, node);
 		case N_FUNC_CALL:
 			return interpreter_visit_func_call(context, node);
+		case N_IF:
+			return interpreter_visit_if(context, node);
 		case N_STATEMENTS:
 			return interpreter_visit_statements(context, node);
 		case N_VAR_ACCESS:
@@ -79,6 +83,13 @@ CarrotObj *interpreter_visit_binop(Interpreter *context, Node *node) {
 	printf("ERROR: operator %s is not defined for type %s and %s\n",
 	       node->op_str, left->type_str, right->type_str);
 	exit(1);
+}
+
+CarrotObj *interpreter_visit_block(Interpreter *context, Node *node) {
+	for (int i = 0; i < arrlen(node->block_statements); i++) {
+		interpreter_visit(context, node->block_statements[i]);
+	}
+	return carrot_null();
 }
 
 CarrotObj *interpreter_visit_func_call(Interpreter *context, Node *node) {
@@ -167,6 +178,25 @@ CarrotObj *interpreter_visit_func_def(Interpreter *context, Node *node) {
 		arrput(function->func_arg_names, node->func_params[i]->param_name);
 	}
 	shput(context->sym_table, node->func_name, function);
+	return carrot_null();
+}
+
+CarrotObj *interpreter_visit_if(Interpreter *context, Node *node) {
+	int found_true = 0;
+	for (int i = 0; i < arrlen(node->conditions); i++) {
+		if (interpreter_visit(context, node->conditions[i])->bool_val) {
+			interpreter_visit(context, node->if_blocks[i]);
+			found_true = 1;
+			break;
+		}
+	}
+
+	/* if no condition is true, and we have else block, then execute 
+	 * the else block */
+	if (!found_true) {
+		if (node->else_block != NULL) 
+			interpreter_visit(context, node->else_block);
+	}
 	return carrot_null();
 }
 

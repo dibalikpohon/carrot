@@ -19,18 +19,28 @@ CarrotObj *interpreter_interpret(Interpreter *interpreter, Node *node) {
 
 CarrotObj *interpreter_visit(Interpreter *context, Node *node) {
 	switch (node->type) {
+		case N_BINOP:
+			return interpreter_visit_binop(context, node);
+		case N_BLOCK:
+			return interpreter_visit_block(context, node);
 		case N_FUNC_CALL:
 			return interpreter_visit_func_call(context, node);
+		case N_IF:
+			return interpreter_visit_if(context, node);
 		case N_STATEMENTS:
 			return interpreter_visit_statements(context, node);
-		case N_VAR_DEF:
-			return interpreter_visit_var_def(context, node);
 		case N_VAR_ACCESS:
 			return interpreter_visit_var_access(context, node);
+		case N_VAR_ASSIGN:
+			return interpreter_visit_var_assign(context, node);
+		case N_VAR_DEF:
+			return interpreter_visit_var_def(context, node);
 		case N_LITERAL:
 			return interpreter_visit_value(context, node);
 		case N_FUNC_DEF: 
 			return interpreter_visit_func_def(context, node);
+		case N_ITER:
+			return interpreter_visit_iter(context, node);
 		case N_RETURN: 
 			return interpreter_visit_return(context, node);
 		// TODO: complete missing cases
@@ -41,6 +51,45 @@ CarrotObj *interpreter_visit(Interpreter *context, Node *node) {
 	}
 	printf("%s\n", "ERROR: Unknown node");
 	exit(1);
+}
+
+CarrotObj *interpreter_visit_binop(Interpreter *context, Node *node) {
+	CarrotObj *left = interpreter_visit(context, node->left);
+	CarrotObj *right = interpreter_visit(context, node->right);
+	if (strcmp(node->op_str, "+") == 0) {
+		if (left->__add != NULL) return left->__add(left, right);
+	} else if (strcmp(node->op_str, "-") == 0) {
+		if (left->__subtract != NULL) return left->__subtract(left, right);
+	} else if (strcmp(node->op_str, "*") == 0) {
+		if (left->__mult != NULL) return left->__mult(left, right);
+	} else if (strcmp(node->op_str, "/") == 0) {
+		if (left->__div != NULL) return left->__div(left, right);
+	} else if (strcmp(node->op_str, "==") == 0) {
+		if (left->__ee != NULL) return left->__ee(left, right);
+	} else if (strcmp(node->op_str, ">") == 0) {
+		if (left->__gt != NULL) return left->__gt(left, right);
+	} else if (strcmp(node->op_str, "<") == 0) {
+		if (left->__lt != NULL) return left->__lt(left, right);
+	} else if (strcmp(node->op_str, ">=") == 0) {
+		if (left->__ge != NULL) return left->__ge(left, right);
+	} else if (strcmp(node->op_str, "<=") == 0) {
+		if (left->__le != NULL) return left->__le(left, right);
+	} else if (strcmp(node->op_str, "&&") == 0) {
+		if (left->__and != NULL) return left->__and(left, right);
+	} else if (strcmp(node->op_str, "||") == 0) {
+		if (left->__or != NULL) return left->__or(left, right);
+	}  
+
+	printf("ERROR: operator %s is not defined for type %s and %s\n",
+	       node->op_str, left->type_str, right->type_str);
+	exit(1);
+}
+
+CarrotObj *interpreter_visit_block(Interpreter *context, Node *node) {
+	for (int i = 0; i < arrlen(node->block_statements); i++) {
+		interpreter_visit(context, node->block_statements[i]);
+	}
+	return carrot_null();
 }
 
 CarrotObj *interpreter_visit_func_call(Interpreter *context, Node *node) {
@@ -126,10 +175,53 @@ CarrotObj *interpreter_visit_func_def(Interpreter *context, Node *node) {
 	function->func_statements = node->func_statements;
 	strcpy(function->func_name, node->func_name);
 	for (int i = 0; i < arrlen(node->func_params); i++) {
-		//printf("%s\n", node->func_params[i]->param_name);
 		arrput(function->func_arg_names, node->func_params[i]->param_name);
 	}
 	shput(context->sym_table, node->func_name, function);
+	return carrot_null();
+}
+
+CarrotObj *interpreter_visit_if(Interpreter *context, Node *node) {
+	int found_true = 0;
+	for (int i = 0; i < arrlen(node->conditions); i++) {
+		if (interpreter_visit(context, node->conditions[i])->bool_val) {
+			interpreter_visit(context, node->if_blocks[i]);
+			found_true = 1;
+			break;
+		}
+	}
+
+	/* if no condition is true, and we have else block, then execute 
+	 * the else block */
+	if (!found_true) {
+		if (node->else_block != NULL) 
+			interpreter_visit(context, node->else_block);
+	}
+	return carrot_null();
+}
+
+CarrotObj *interpreter_visit_iter(Interpreter *context, Node *node) {
+	CarrotObj *iterable = interpreter_visit(context, node->iterable);
+	int iterable_len = arrlen(iterable->list_items);
+	char *loop_iterator_var_name = node->loop_iterator_var_name;
+	char *loop_index_var_name = node->loop_index_var_name;
+	Interpreter local_interpreter = create_interpreter();
+	local_interpreter.parent = context;
+
+	for (int i = 0; i < iterable_len; i++) {
+		shput(local_interpreter.sym_table,
+		      loop_iterator_var_name,
+		      iterable->list_items[i]);
+		if (node->loop_with_index)
+			shput(local_interpreter.sym_table,
+			      loop_index_var_name,
+			      carrot_int(i));
+		for (int j = 0; j < arrlen(node->loop_statements); j++)
+			interpreter_visit(&local_interpreter,
+				          node->loop_statements[j]);
+	}
+	/* TODO: free local variables */
+	interpreter_free(&local_interpreter);
 	return carrot_null();
 }
 
@@ -156,8 +248,10 @@ CarrotObj *interpreter_visit_value(Interpreter *context, Node *node) {
 		return carrot_int(node->int_val);
 	} else if (node->var_type == DT_FLOAT) {
 		return carrot_float(node->float_val);
+	} else if (node->var_type == DT_BOOL) {
+		return carrot_bool(node->bool_val);
 	} else if (node->var_type == DT_NULL) {
-		return carrot_null();
+		return carrot_null(node->bool_val);
 	} else if (node->var_type == DT_LIST) {
 		CarrotObj **list_items = NULL;
 		for (int i = 0; i < arrlen(node->list_items); i++) {
@@ -189,10 +283,231 @@ CarrotObj *interpreter_visit_var_access(Interpreter *context, Node *node) {
 	return obj;
 }
 
+CarrotObj *interpreter_visit_var_assign(Interpreter *context, Node *node) {
+	CarrotObj *existing_var_content = shget(context->sym_table, node->var_name);
+	if (existing_var_content != NULL) {
+		/* remove existing_var_content from context's local symbol table and
+		 * global tracker */
+		shdel(context->sym_table, node->var_name);
+
+		/* TODO Remove the existing variable content itself */
+		// shdel(CARROT_TRACKING_ARR, existing_var_content->hash);
+	}
+	CarrotObj *var_content = interpreter_visit(context, node->var_node);
+	shput(context->sym_table, node->var_name, var_content);
+	return var_content;
+}
+
 CarrotObj *interpreter_visit_var_def(Interpreter *context, Node *node) {
-	CarrotObj *obj = interpreter_visit(context, node->var_node);
-	shput(context->sym_table, node->var_name, obj);
-	return carrot_null();
+	if (shget(context->sym_table, node->var_name) != NULL) {
+		printf("ERROR: variable redefinition in the same scope: %s\n", 
+		       node->var_name);
+		exit(1);
+	}
+	CarrotObj *var_content = interpreter_visit(context, node->var_node);
+	shput(context->sym_table, node->var_name, var_content);
+
+	return var_content;
+}
+
+CarrotObj *__int_add(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_int(self->int_val + other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_float(self->int_val + other->float_val);
+	}
+	printf("ERROR: Cannot perform addition on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_subtract(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_int(self->int_val - other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_float(self->int_val - other->float_val);
+	}
+	printf("ERROR: Cannot perform subtraction on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_mult(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_int(self->int_val * other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_float(self->int_val * other->float_val);
+	}
+	printf("ERROR: Cannot perform multiplication on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_div(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_int(self->int_val / other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_float((float)self->int_val / other->float_val);
+	}
+	printf("ERROR: Cannot perform division on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_ee(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val == other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val == other->float_val);
+	}
+	printf("ERROR: Cannot perform \"equal to\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_gt(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val > other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val > other->float_val);
+	}
+	printf("ERROR: Cannot perform \">\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_lt(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val < other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val < other->float_val);
+	}
+	printf("ERROR: Cannot perform \"<\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_ge(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val >= other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val >= other->float_val);
+	}
+	printf("ERROR: Cannot perform \">=\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__int_le(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val <= other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val <= other->float_val);
+	}
+	printf("ERROR: Cannot perform \"<=\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_add(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_int(self->float_val + (int) other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_float(self->float_val + other->float_val);
+	}
+
+	printf("ERROR: Cannot perform addition on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_subtract(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_int(self->float_val - (float) other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_float(self->float_val - other->float_val);
+	}
+
+	printf("ERROR: Cannot perform subtraction on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_mult(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_int(self->float_val * (float) other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_float(self->float_val * other->float_val);
+	}
+
+	printf("ERROR: Cannot perform multiplication on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_div(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_float(self->float_val / (float)other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_float(self->float_val / other->float_val);
+	}
+
+	printf("ERROR: Cannot perform division on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_ee(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val == other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val == other->float_val);
+	}
+	printf("ERROR: Cannot perform \"==\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_gt(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val > other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val > other->float_val);
+	}
+	printf("ERROR: Cannot perform \">\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_lt(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val < other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val < other->float_val);
+	}
+	printf("ERROR: Cannot perform \"<\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_ge(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val >= other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val >= other->float_val);
+	}
+	printf("ERROR: Cannot perform \">=\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__float_le(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val <= other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val <= other->float_val);
+	}
+	printf("ERROR: Cannot perform \"<=\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__bool_and(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "bool") == 0) {
+		return carrot_bool(self->bool_val && other->bool_val);
+	} 
+	printf("ERROR: Cannot use \"&&\" on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__bool_or(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "bool") == 0) {
+		return carrot_bool(self->bool_val || other->bool_val);
+	} 
+	printf("ERROR: Cannot use \"||\" on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
 }
 
 CarrotObj *carrot_obj_allocate() {
@@ -234,11 +549,34 @@ CarrotObj *carrot_get_var(char *var_name, Interpreter *context) {
 	return NULL;
 }
 
+CarrotObj *carrot_bool(int bool_val) {
+	CarrotObj *obj = carrot_obj_allocate();
+	obj->type = CARROT_BOOL;
+	obj->bool_val = bool_val;
+	obj->type_str = sdsnew("bool");
+	obj->repr = sdscatprintf(sdsempty(),
+			         "%s",
+				 bool_val == 1 ? "true" : "false");
+	obj->__and = __bool_and;
+	obj->__or = __bool_or;
+	return obj;
+}
+
 CarrotObj *carrot_int(int int_val) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_INT;
+	obj->int_val = int_val;
 	obj->type_str = sdsnew("int");
 	obj->repr = sdscatprintf(sdsempty(), "%d", int_val);
+	obj->__add = __int_add;
+	obj->__subtract = __int_subtract;
+	obj->__mult = __int_mult;
+	obj->__div = __int_div;
+	obj->__ee = __int_ee;
+	obj->__ge = __int_ge;
+	obj->__le = __int_le;
+	obj->__gt = __int_gt;
+	obj->__lt = __int_lt;
 	return obj;
 }
 
@@ -268,8 +606,18 @@ CarrotObj *carrot_list(CarrotObj **list_items) {
 CarrotObj *carrot_float(float float_val) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_FLOAT;
+	obj->float_val = float_val;
 	obj->type_str = sdsnew("float");
 	obj->repr = sdscatprintf(sdsempty(), "%f", float_val);
+	obj->__add = __float_add;
+	obj->__subtract = __float_subtract;
+	obj->__mult = __float_mult;
+	obj->__div = __float_div;
+	obj->__ee = __float_ee;
+	obj->__ge = __float_ge;
+	obj->__le = __float_le;
+	obj->__gt = __float_gt;
+	obj->__lt = __float_lt;
 	return obj;
 }
 
@@ -279,6 +627,17 @@ CarrotObj *carrot_str(char *str_val) {
 	obj->type_str = sdsnew("str");
 	obj->repr = sdsnew(str_val);
 	return obj;
+}
+
+CarrotObj *carrot_eval(Interpreter *interpreter, char *source) {
+	Parser parser;
+	parser_init(&parser, source);
+	Node *n = parser_parse(&parser);
+
+	CarrotObj *res = interpreter_interpret(interpreter, n);
+
+	free_node(n);
+	return res;
 }
 
 void carrot_finalize() {

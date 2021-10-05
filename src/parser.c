@@ -14,6 +14,10 @@ Node *init_node() {
 	Node *n = malloc(sizeof(Node));
 	n->type = N_UNKNOWN;
 	n->var_type = DT_UNKNOWN;
+	n->block_statements = NULL;
+	n->conditions = NULL;
+	n->if_blocks = NULL;
+	n->else_block = NULL;
 	n->obj_val = NULL;
 	n->list_items = NULL;
 	n->statements = NULL;
@@ -21,6 +25,8 @@ Node *init_node() {
 	n->func_params = NULL;
 	n->func_statements = NULL;
 	n->func_args = NULL;
+	n->iterable = NULL;
+	n->loop_statements = NULL;
 	n->return_value = NULL;
 	arrput(NODE_TRACKING_ARR, n);
 	return n;
@@ -30,10 +36,17 @@ void free_node(Node *node) {
 	int len = arrlen(NODE_TRACKING_ARR);
 	for (int i = 0; i < len; i++) {
 		Node *n = NODE_TRACKING_ARR[i];
+		n->iterable = NULL;
+		n->loop_statements = NULL;
+
+		if (n->block_statements != NULL) arrfree(n->block_statements);
+		if (n->conditions != NULL) arrfree(n->conditions);
+		if (n->if_blocks != NULL) arrfree(n->if_blocks);
 		if (n->list_items != NULL) arrfree(n->list_items);
 		if (n->func_args != NULL) arrfree(n->func_args);
 		if (n->func_statements != NULL) arrfree(n->func_statements);
 		if (n->func_params != NULL) arrfree(n->func_params);
+		if (n->loop_statements != NULL) arrfree(n->loop_statements);
 		free(n);
 	}
 	arrfree(NODE_TRACKING_ARR);
@@ -66,7 +79,18 @@ Node *parser_parse(Parser *parser) {
 Node *parser_parse_arith(Parser *parser) {
 	Node *left = parser_parse_term(parser);
 
-	while (parser->current_token.tok_kind == T_PLUS) {
+	while (parser->current_token.tok_kind == T_PLUS ||
+	       parser->current_token.tok_kind == T_MINUS) {
+		Node *binop_node = init_node();
+		strcpy(binop_node->op_str, parser->current_token.text);
+
+		parser_consume(parser);
+		Node *right = parser_parse_term(parser);
+
+		binop_node->type = N_BINOP;
+		binop_node->left = left;
+		binop_node->right = right;
+		left = binop_node;
 	}
 
 	return left;
@@ -76,10 +100,26 @@ Node *parser_parse_atom(Parser *parser) {
 	tok_kind_t kind = parser->current_token.tok_kind;
 
 	if (kind == T_ID) {
+		if (strcmp(parser->current_token.text, "true") == 0 ||
+		    strcmp(parser->current_token.text, "false") == 0) {
+			Node *val_node = init_node();
+			val_node->type = N_LITERAL;
+			val_node->var_type = DT_BOOL;
+			if (strcmp(parser->current_token.text, "true") == 0) {
+				val_node->bool_val = 1;
+			} else {
+				val_node->bool_val = 0;
+			}
+			parser_consume(parser);
+			return val_node;
+		} 
+
+		/* Parse identifier */
 		return parser_parse_identifier(parser);
 	} else if (kind == T_STR ||
 		   kind == T_INT ||
 		   kind == T_FLOAT) {
+		/* Parse literals */
 		Node *val_node = init_node();
 		val_node->type = N_LITERAL;
 		val_node->value_token = parser->current_token;
@@ -96,7 +136,18 @@ Node *parser_parse_atom(Parser *parser) {
 		}
 		parser_consume(parser);
 		return val_node;
+	} else if (kind == T_LPAREN) {
+		/* Parse parenthesized expression */
+		parser_consume(parser);
+		Node *expr = parser_parse_expression(parser);
+		if (parser->current_token.tok_kind != T_RPAREN) {
+			printf("ERROR: Enclosing parenthesis expected\n");
+			exit(1);
+		}
+		parser_consume(parser);
+		return expr;
 	} else if (kind == T_LBRACKET) {
+		/* Parse list */
 		return parser_parse_list(parser);
 	}
 	printf("ERROR: literal or expression expected\n");
@@ -119,7 +170,23 @@ Node *parser_parse_com(Parser *parser) {
 	Node *left = parser_parse_arith(parser);
 
 	// 2) parse ==, >, <, >=, <=
-	// ...
+	while (parser->current_token.tok_kind == T_EE ||
+	       parser->current_token.tok_kind == T_GT ||
+	       parser->current_token.tok_kind == T_LT ||
+	       parser->current_token.tok_kind == T_GE ||
+	       parser->current_token.tok_kind == T_LE ||
+	       parser->current_token.tok_kind == T_NE) {
+		Node *binop_node = init_node();
+		strcpy(binop_node->op_str, parser->current_token.text);
+
+		parser_consume(parser);
+		Node *right = parser_parse_arith(parser);
+
+		binop_node->type = N_BINOP;
+		binop_node->left = left;
+		binop_node->right = right;
+		left = binop_node;
+	}
 	
 	return left;
 }
@@ -128,7 +195,20 @@ Node *parser_parse_expression(Parser *parser) {
 	Node *left = parser_parse_com(parser);
 
 	/* and, or, ... */
+	while (parser->current_token.tok_kind == T_AND ||
+	       parser->current_token.tok_kind == T_OR) {
+		Node *binop_node = init_node();
+		strcpy(binop_node->op_str, parser->current_token.text);
 
+		parser_consume(parser);
+		Node *right = parser_parse_com(parser);
+
+		binop_node->type = N_BINOP;
+		binop_node->left = left;
+		binop_node->right = right;
+		left = binop_node;
+	}
+	
 	return left;
 }
 
@@ -228,11 +308,26 @@ Node *parser_parse_function_param(Parser *parser) {
 	return param;
 }
 
+Node *parser_parse_block(Parser *parser) {
+	Node *block_node = init_node();
+	block_node->type = N_BLOCK;
+	block_node->block_statements = NULL;
+	while (strcmp(parser->current_token.text, "end") != 0 &&
+	       strcmp(parser->current_token.text, "elif") != 0 &&
+	       strcmp(parser->current_token.text, "else") != 0) {
+		arrput(block_node->block_statements,
+		       parser_parse_statement(parser));
+	}
+	return block_node;
+}
+
 Node *parser_parse_identifier(Parser *parser) {
-	/* 3 possibilities:
-	 * - variable declaration with dtype
-	 * - variable declaration
-	 * - variable access
+	/* Possibilities:
+	 * - Function definition
+	 * - Variable declaration
+	 * - Function call
+	 * - Variable assignment
+	 * - Variable access
 	 */
 	Token id_token = parser_consume(parser);
 	Token next_token = parser->current_token; //parser_consume(parser);
@@ -248,7 +343,6 @@ Node *parser_parse_identifier(Parser *parser) {
 		}
 
 		/* Handle variable declaration */
-
 		if (parser->current_token.tok_kind == T_EQUAL) {
 			/* The variable is initialized with some value 
 			 * since we found equal char
@@ -269,13 +363,11 @@ Node *parser_parse_identifier(Parser *parser) {
 				vardef_node->var_type = DT_FLOAT;
 			}
 
-
 			return vardef_node;
 		} 
 	} else if (next_token.tok_kind == T_LPAREN) {
 		parser_consume(parser);
 		/* Handle function call */
-
 		Node **args = NULL;
 
 		if (parser->current_token.tok_kind == T_RPAREN) {
@@ -292,6 +384,7 @@ Node *parser_parse_identifier(Parser *parser) {
 			}
 			if (parser->current_token.tok_kind != T_RPAREN) {
 				printf("ERROR: \")\" expected.\n");
+				exit(1);
 			}
 			
 			// consume R_PAREN
@@ -305,6 +398,12 @@ Node *parser_parse_identifier(Parser *parser) {
 		return obj;
 	} else if (next_token.tok_kind == T_EQUAL) {
 		/* Handle assignment */
+		parser_consume(parser);
+		Node *var_assign = init_node();
+		var_assign->type = N_VAR_ASSIGN;
+		var_assign->var_node = parser_parse_expression(parser);
+		strcpy(var_assign->var_name, id_token.text);
+		return var_assign;
 	} else {
 		/* Handle variable access */
 		Node *obj = init_node();
@@ -318,8 +417,132 @@ Node *parser_parse_identifier(Parser *parser) {
 	exit(1);
 }
 
-Node *parser_parse_keyword(Parser *parser) {
-	exit(1);	
+Node *parser_parse_if(Parser *parser) {
+	parser_consume(parser);
+
+	//Node *if_block;
+	Node *if_condition_expr = parser_parse_expression(parser);
+	if (parser->current_token.tok_kind != T_COLON) {
+		printf("%s\n", parser->current_token.text);
+		printf("ERROR: Expected \":\"");
+		exit(1);
+	}
+	parser_consume(parser);
+
+	Node *if_node = init_node();
+	if_node->type = N_IF;
+
+	Node **conditions = NULL;
+	Node **if_blocks = NULL;
+	Node *else_block = NULL;
+	arrput(conditions, if_condition_expr);
+	arrput(if_blocks, parser_parse_block(parser));
+
+	if (strcmp(parser->current_token.text, "end") == 0) {
+		parser_consume(parser);
+		/* if end keyword present immediately after if statement
+		 * block, then just return the if_node */
+		if_node->conditions = conditions;
+		if_node->if_blocks = if_blocks;
+		return if_node;
+	}
+
+	if (strcmp(parser->current_token.text, "elif") == 0) {
+		while (strcmp(parser->current_token.text, "elif") == 0) {
+			parser_consume(parser);
+			arrput(conditions, parser_parse_expression(parser));
+			if (parser->current_token.tok_kind != T_COLON) {
+				printf("ERROR: Elif Expected \":\"");
+				exit(1);
+			}
+			parser_consume(parser);
+			
+			arrput(if_blocks, parser_parse_block(parser));
+		}
+	} 
+
+	/* check whether a series of elif is terminated */
+	if (strcmp(parser->current_token.text, "end") == 0) {
+		parser_consume(parser);
+		if_node->conditions = conditions;
+		if_node->if_blocks = if_blocks;
+		return if_node;
+	}
+
+	/* otherwise, if else keyword present, handle it accordingly */
+	if (strcmp(parser->current_token.text, "else") == 0) {
+		parser_consume(parser);
+		if (parser->current_token.tok_kind != T_COLON) {
+			printf("ERROR: Expected \":\"");
+			exit(1);
+		}
+		parser_consume(parser);
+		else_block = parser_parse_block(parser);
+	} 
+
+	if (strcmp(parser->current_token.text, "end") != 0) {
+		printf("ERROR: Expected \"end\"");
+		exit(1);
+	}
+	parser_consume(parser);
+	if_node->conditions = conditions;
+	if_node->if_blocks = if_blocks;
+	if_node->else_block = else_block;
+
+	return if_node;
+}
+
+Node *parser_parse_iter(Parser *parser) {
+	parser_consume(parser);
+
+	Node *iterable = parser_parse_expression(parser);
+
+	if (strcmp(parser->current_token.text, "as") != 0) {
+		printf("ERROR: Expected \"as\"");
+		exit(1);
+	}
+	parser_consume(parser);
+
+	Node *iter_node = init_node();
+	strcpy(iter_node->loop_iterator_var_name, parser->current_token.text);
+
+	parser_consume(parser);
+
+	if (parser->current_token.tok_kind == T_COLON) {
+		/* Case 1: iter loop WITHOUT index reference */
+		parser_consume(parser); //just continue to the next token
+		iter_node->loop_with_index = 0;
+	} else if (parser->current_token.tok_kind == T_AT) {
+		/* Case 1: iter loop WITH index reference */
+		parser_consume(parser);
+		if (parser->current_token.tok_kind != T_ID) {
+			printf("ERROR: Identifier expected for index reference");
+			exit(1);
+		}
+		iter_node->loop_with_index = 1;
+		strcpy(iter_node->loop_index_var_name, parser->current_token.text);
+		parser_consume(parser);
+
+		if (parser->current_token.tok_kind != T_COLON) {
+			printf("ERROR: Syntax error: colon is expected\n");
+		}
+		parser_consume(parser);
+	} else {
+		printf("ERROR: Syntax error: colon or index reference is expected\n");
+		exit(1);
+	}
+
+	Node **loop_statements = NULL;
+	while (strcmp(parser->current_token.text, "end") != 0) {
+		arrput(loop_statements, parser_parse_statement(parser));
+	}
+	parser_consume(parser); // consume "end" token
+
+	iter_node->type = N_ITER;
+	iter_node->loop_statements = loop_statements;
+	iter_node->iterable = iterable;
+
+	return iter_node;
 }
 
 Node *parser_parse_list(Parser *parser) {
@@ -369,13 +592,29 @@ Node *parser_parse_script(Parser *parser) {
 }
 
 Node *parser_parse_statement(Parser *parser) {
+	if (strcmp(parser->current_token.text, "iter") == 0) {
+		return parser_parse_iter(parser);
+	} else if (strcmp(parser->current_token.text, "if") == 0) {
+		return parser_parse_if(parser);
+	}
 	return parser_parse_expression(parser);
 }
 
 Node *parser_parse_term(Parser *parser) {
 	Node *left = parser_parse_factor(parser);
 
-	while (parser->current_token.tok_kind == T_MULT) {
+	while (parser->current_token.tok_kind == T_MULT ||
+	       parser->current_token.tok_kind == T_DIV) {
+		Node *binop_node = init_node();
+		strcpy(binop_node->op_str, parser->current_token.text);
+
+		parser_consume(parser);
+		Node *right = parser_parse_factor(parser);
+
+		binop_node->type = N_BINOP;
+		binop_node->left = left;
+		binop_node->right = right;
+		left = binop_node;
 	}
 
 	return left;

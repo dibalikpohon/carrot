@@ -55,31 +55,6 @@ static char make_escape(char* s) {
 	return 0; // is not found
 }
 
-char *tok_kind_to_str(tok_kind_t kind) {
-	switch (kind) {
-		case T_INT: return "T_INT";
-		case T_FLOAT: return "T_FLOAT";
-		case T_STR: return "T_STR";
-		case T_ID: return "T_ID";
-		case T_KEYWORD: return "T_KEYWORD";
-		case T_PLUS: return "T_PLUS";
-		case T_MINUS: return "T_MINUS";
-		case T_EQUAL: return "T_EQUAL";
-		case T_COLON: return "T_COLON";
-		case T_RARROW: return "T_RARROW";
-		case T_EOF: return "T_EOF";
-		case T_LPAREN: return "T_LPAREN";
-		case T_RPAREN: return "T_RPAREN";
-		case T_LBRACKET: return "T_LBRACKET";
-		case T_RBRACKET: return "T_RBRACKET";
-		case T_MULT: return "T_MULT";
-		case T_DIV: return "T_DIV";
-		case T_COMMA: return "T_COMMA";
-		case T_UNKNOWN: return "T_UNKNOWN";
-	} 
-	return "T_UNKNOWN";
-}
-
 Token create_token(tok_kind_t tok_kind, char *text) {
 	Token t;
 	t.tok_kind = tok_kind;
@@ -213,30 +188,86 @@ void lexer_skip_whitespace(Lexer *lexer) {
  *===========================================================================*/
 void lexer_lex(Lexer *lexer) {
 	while (lexer->c != '\0') {
-		lexer_skip_whitespace(lexer);
-
-		if (isalpha(lexer->c) || lexer->c == '_') {
+		if (isspace(lexer->c)) {
+			lexer_skip_whitespace(lexer);
+			continue;
+		} else if (isalpha(lexer->c) || lexer->c == '_') {
 			make_identifier(lexer);
+			continue;
 		} else if (isdigit(lexer->c)) {
 			make_number(lexer);
+			continue;
 		} else if (lexer->c == '"') {
 			make_string(lexer);
+			continue;
 		} else if (lexer->c == '=') {
-			make_single_char_token(lexer, T_EQUAL, "=");
+			if (lexer->source[lexer->idx+1] == '=') {
+				make_two_chars_token(lexer, T_EE, "==");
+			} else {
+				make_single_char_token(lexer, T_EQUAL, "=");
+			}
+			continue;
+		} else if (lexer->c == '>') {
+			if (lexer->source[lexer->idx+1] == '=') {
+				make_two_chars_token(lexer, T_GE, ">=");
+			} else {
+				make_single_char_token(lexer, T_GT, ">");
+			}
+			continue;
+		} else if (lexer->c == '<') {
+			if (lexer->source[lexer->idx+1] == '=') {
+				make_two_chars_token(lexer, T_LE, "<=");
+			} else {
+				make_single_char_token(lexer, T_LT, "<");
+			}
+			continue;
+		} else if (lexer->c == '!') {
+			if (lexer->source[lexer->idx+1] == '=') {
+				make_two_chars_token(lexer, T_NE, "!=");
+			} else {
+				make_single_char_token(lexer, T_NOT, "!");
+			}
+			continue;
+		} else if (lexer->c == '|') {
+			if (lexer->source[lexer->idx+1] == '|') {
+				make_two_chars_token(lexer, T_OR, "||");
+			}
+			continue;
+		} else if (lexer->c == '&') {
+			if (lexer->source[lexer->idx+1] == '&') {
+				make_two_chars_token(lexer, T_AND, "&&");
+			}
+			continue;
 		} else if (lexer->c == '(') {
 			make_single_char_token(lexer, T_LPAREN, "(");
+			continue;
 		} else if (lexer->c == ')') {
 			make_single_char_token(lexer, T_RPAREN, ")");
+			continue;
 		} else if (lexer->c == '[') {
 			make_single_char_token(lexer, T_LBRACKET, "[");
+			continue;
 		} else if (lexer->c == ']') {
 			make_single_char_token(lexer, T_RBRACKET, "]");
+			continue;
 		} else if (lexer->c == ',') {
 			make_single_char_token(lexer, T_COMMA, ",");
+			continue;
 		} else if (lexer->c == '+') {
 			make_single_char_token(lexer, T_PLUS, "+");
-		} else if (lexer->c == ':') {
+			continue;
+		} else if (lexer->c == '*') {
+			make_single_char_token(lexer, T_MULT, "*");
+			continue;
+		} else if (lexer->c == '/') {
+			make_single_char_token(lexer, T_DIV, "/");
+			continue;
+		}else if (lexer->c == ':') {
 			make_single_char_token(lexer, T_COLON, ":");
+			continue;
+		} else if (lexer->c == '@') {
+			make_single_char_token(lexer, T_AT, "@");
+			continue;
 		} else if (lexer->c == '-') {
 			if (lexer->source[lexer->idx+1] == '-') {
 				lexer_skip_comment(lexer);
@@ -245,13 +276,14 @@ void lexer_lex(Lexer *lexer) {
 			} else {
 				make_single_char_token(lexer, T_MINUS, "-");
 			}
+			continue;
 		} else {
-			lexer_next(lexer);
-			//char msg[100];
-			//sprintf(msg,"Unexpected character: \"%c\"\n", lexer->c);
-			//carrot_log_error(msg, "idklol", lexer->line_num);
-			//exit(1);
+			char msg[100];
+			sprintf(msg,"Unexpected character: \"%c\"\n", lexer->c);
+			carrot_log_error(msg, "idklol", lexer->line_num);
+			exit(1);
 		}
+		lexer_next(lexer);
 	}
 	lexer_add_token(lexer, create_token(T_EOF, "EOF"));
 }

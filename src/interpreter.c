@@ -629,6 +629,17 @@ CarrotObj *carrot_str(char *str_val) {
 	return obj;
 }
 
+CarrotObj *carrot_eval(Interpreter *interpreter, char *source) {
+	Parser parser;
+	parser_init(&parser, source);
+	Node *n = parser_parse(&parser);
+
+	CarrotObj *res = interpreter_interpret(interpreter, n);
+
+	free_node(n);
+	return res;
+}
+
 void carrot_finalize() {
 	/* Frees remaining CarrotObj's in heap.
 	 * Call this in the very end of main function */

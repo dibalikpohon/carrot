@@ -105,6 +105,8 @@ CarrotObj *carrot_list(CarrotObj **list_items);
 CarrotObj *carrot_float(float float_val);
 CarrotObj *carrot_str(char *str_val);
 
+CarrotObj *carrot_eval(Interpreter *interpreter, char *source);
+
 void carrot_finalize();
 void carrot_free(CarrotObj *root);
 void carrot_init();

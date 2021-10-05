@@ -22,6 +22,7 @@ int is_keyword(char *s) {
 	return found;
 }
 
+<<<<<<< HEAD
 int is_escape(char* s) {
 	const int n_escape = 6;
 	char escapes[6][3] = {
@@ -55,6 +56,8 @@ static char make_escape(char* s) {
 	return 0; // is not found
 }
 
+=======
+>>>>>>> ea6fbe1fb23c1dd8e8fee3d83ffc3a26822144e4
 Token create_token(tok_kind_t tok_kind, char *text) {
 	Token t;
 	t.tok_kind = tok_kind;

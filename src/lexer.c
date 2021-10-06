@@ -37,11 +37,11 @@ int is_escape(char* s) {
 	return 0;
 }
 
-/* I think make_escape is not used by anywhere
-   except this translation unit so i marked this
+/* The make_escape is not used by anywhere
+   except this translation unit so we marked this
    function as static
 
-   By now, escape character only support single char
+   Currently, escape character only support single char
 */
 static char make_escape(char* s) {
 	switch(s[1]) {
@@ -131,7 +131,6 @@ void make_string(Lexer *lexer) {
 			char e[3] = {lexer->c, lexer->source[++lexer->idx], 0};
 			if (is_escape(e)) {
 				s[i++] = make_escape(e);
-				// lexer_next(lexer);
 			}
 			else {
 				fprintf(stderr, "Illegal escape character %s at line %d.\n", e, lexer->line_num);

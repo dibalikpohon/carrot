@@ -1,0 +1,6 @@
+println("ABC\nDEF")
+println("ABC\tDEF")
+println("ABC\\DEF")
+println("\"ABC\"")
+println("\'ABC\'")
+println("'ABC'")

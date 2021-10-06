@@ -20,6 +20,45 @@ CarrotObj *carrot_func_println(CarrotObj **args) {
 	return carrot_null();
 }
 
+CarrotObj *carrot_func_range(CarrotObj **args) {
+	if (arrlen(args) < 1 || arrlen(args) > 3) {
+		printf("ERROR: Function 'range' accepts 1, 2 or 3 arguments.\n");
+		printf("       Usage: `range(upper_bound) or range(lower_bound, upper_bound)`\n");
+		printf("       or range(lower_bound, upper_bound, step).\n");
+		exit(1);
+	}
+
+	int all_int = 1;
+	for (int i = 0; i < arrlen(args); i++) {
+		all_int = all_int && (args[i]->type == CARROT_INT);
+	}
+	if (!all_int) {
+		printf("ERROR: All arguments for `range` should be of `int` type\n");
+		exit(1);
+	}
+
+	CarrotObj **list_items = NULL;
+
+	if (arrlen(args) == 1) {
+		for (int i = 0; i < args[0]->int_val; i++) {
+			arrput(list_items, carrot_int(i));
+		}
+		return carrot_list(list_items);
+	}
+
+	int step = 1;
+	if (arrlen(args) == 3) {
+		step = args[2]->int_val;
+	}
+
+	int low = args[0]->int_val;
+	int high = args[1]->int_val;
+	for (int i = low; i < high; i += step) {
+		arrput(list_items, carrot_int(i));
+	}
+	return carrot_list(list_items);
+}
+
 CarrotObj *carrot_func_type(CarrotObj **args) {
 	int argc = arrlen(args);
 	if (argc != 1) {
@@ -47,6 +86,9 @@ void carrot_register_all_builtin_func(Interpreter *interpreter) {
 				     interpreter);
 	carrot_register_builtin_func("println",
 				     &carrot_func_println,
+				     interpreter);
+	carrot_register_builtin_func("range",
+				     carrot_func_range,
 				     interpreter);
 	carrot_register_builtin_func("type",
 				     carrot_func_type,

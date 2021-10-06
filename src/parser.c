@@ -169,7 +169,7 @@ Node *parser_parse_com(Parser *parser) {
 	// left term
 	Node *left = parser_parse_arith(parser);
 
-	// 2) parse ==, >, <, >=, <=
+	// 2) parse ==, >, <, >=, <=, !=
 	while (parser->current_token.tok_kind == T_EE ||
 	       parser->current_token.tok_kind == T_GT ||
 	       parser->current_token.tok_kind == T_LT ||
@@ -332,40 +332,7 @@ Node *parser_parse_identifier(Parser *parser) {
 	Token id_token = parser_consume(parser);
 	Token next_token = parser->current_token; //parser_consume(parser);
 
-	if (next_token.tok_kind == T_COLON) {
-		parser_consume(parser);
-		// holding data type
-		Token data_type_token = parser_consume(parser);
-
-		/* Handle function definition */
-		if (strcmp(data_type_token.text, "func") == 0) {
-			return parser_parse_function_def(parser, id_token);
-		}
-
-		/* Handle variable declaration */
-		if (parser->current_token.tok_kind == T_EQUAL) {
-			/* The variable is initialized with some value 
-			 * since we found equal char
-			 */
-			parser_consume(parser);
-
-			Node *vardef_node = init_node();
-			vardef_node->type = N_VAR_DEF;
-			Node *var_node = parser_parse_expression(parser);
-			vardef_node->var_node = var_node;
-			strcpy(vardef_node->var_name, id_token.text);
-			strcpy(vardef_node->var_type_str, data_type_token.text);
-			if (strcmp(data_type_token.text, "str") == 0) {
-				vardef_node->var_type = DT_STR;
-			} else if (strcmp(data_type_token.text, "int") == 0) {
-				vardef_node->var_type = DT_INT;
-			} else if (strcmp(data_type_token.text, "float") == 0) {
-				vardef_node->var_type = DT_FLOAT;
-			}
-
-			return vardef_node;
-		} 
-	} else if (next_token.tok_kind == T_LPAREN) {
+	if (next_token.tok_kind == T_LPAREN) {
 		parser_consume(parser);
 		/* Handle function call */
 		Node **args = NULL;
@@ -420,7 +387,6 @@ Node *parser_parse_identifier(Parser *parser) {
 Node *parser_parse_if(Parser *parser) {
 	parser_consume(parser);
 
-	//Node *if_block;
 	Node *if_condition_expr = parser_parse_expression(parser);
 	if (parser->current_token.tok_kind != T_COLON) {
 		printf("%s\n", parser->current_token.text);
@@ -596,7 +562,46 @@ Node *parser_parse_statement(Parser *parser) {
 		return parser_parse_iter(parser);
 	} else if (strcmp(parser->current_token.text, "if") == 0) {
 		return parser_parse_if(parser);
-	}
+	} else if (parser->current_token.tok_kind == T_ID) {
+		Token next_token = parser->lexer.tokens[parser->i+1];
+		if (next_token.tok_kind == T_COLON) {
+			Token id_token = parser->current_token;
+			parser_consume(parser); // leaving ID
+			parser_consume(parser); // leaving colon
+
+			// holding data type
+			Token data_type_token = parser_consume(parser);
+
+			/* Handle function definition */
+			if (strcmp(data_type_token.text, "func") == 0) {
+				return parser_parse_function_def(parser, id_token);
+			}
+
+			/* Handle variable declaration */
+			if (parser->current_token.tok_kind == T_EQUAL) {
+				/* The variable is initialized with some value 
+				 * since we found equal char
+				 */
+				parser_consume(parser);
+
+				Node *vardef_node = init_node();
+				vardef_node->type = N_VAR_DEF;
+				Node *var_node = parser_parse_expression(parser);
+				vardef_node->var_node = var_node;
+				strcpy(vardef_node->var_name, id_token.text);
+				strcpy(vardef_node->var_type_str, data_type_token.text);
+				if (strcmp(data_type_token.text, "str") == 0) {
+					vardef_node->var_type = DT_STR;
+				} else if (strcmp(data_type_token.text, "int") == 0) {
+					vardef_node->var_type = DT_INT;
+				} else if (strcmp(data_type_token.text, "float") == 0) {
+					vardef_node->var_type = DT_FLOAT;
+				}
+
+				return vardef_node;
+			} 
+		} 
+	} 
 	return parser_parse_expression(parser);
 }
 

@@ -466,6 +466,16 @@ CarrotObj *__float_ee(CarrotObj *self, CarrotObj *other) {
 	exit(1);
 }
 
+CarrotObj *__float_ne(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val != other->float_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val != other->float_val);
+	}
+	printf("ERROR: Cannot perform \"equal to\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
 CarrotObj *__float_gt(CarrotObj *self, CarrotObj *other) {
 	if (strcmp(other->type_str, "int") == 0) {
 		return carrot_bool(self->float_val > other->int_val);
@@ -636,6 +646,7 @@ CarrotObj *carrot_float(float float_val) {
 	obj->__mult = __float_mult;
 	obj->__div = __float_div;
 	obj->__ee = __float_ee;
+	obj->__ne = __float_ne;
 	obj->__ge = __float_ge;
 	obj->__le = __float_le;
 	obj->__gt = __float_gt;

@@ -532,6 +532,20 @@ CarrotObj *__bool_or(CarrotObj *self, CarrotObj *other) {
 	exit(1);
 }
 
+CarrotObj *__str_add(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "str") == 0) {
+		sds dup = sdsdup(self->repr);
+		sds cat = sdscatsds(dup, other->repr); // dup + other->repr; dup IS INVALIDATED AND SHOULD NOT BE USED
+		
+		CarrotObj* carrot_obj = carrot_str(cat);
+		sdsfree(cat);		// free the cat
+		
+		return carrot_obj;
+	}
+	printf("ERROR: Cannot perform addition on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
 CarrotObj *__str_ee(CarrotObj *self, CarrotObj *other) {
 	if (strcmp(other->type_str, "str") == 0) {
 		int ee = sdscmp(self->repr, other->repr) == 0;
@@ -668,6 +682,7 @@ CarrotObj *carrot_str(char *str_val) {
 	obj->type = CARROT_STR;
 	obj->type_str = sdsnew("str");
 	obj->repr = sdsnew(str_val);
+	obj->__add = __str_add;
 	obj->__ee = __str_ee;
 	obj->__ne = __str_ne;
 	return obj;

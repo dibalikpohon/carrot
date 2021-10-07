@@ -9,3 +9,8 @@ println("one and two is the same? ", one == two)
 println("two and three is the same? ",three == two)
 
 println("one and two is not the same? ", one != two)
+
+-- adding between two strings
+four: str = one + two
+println(four)
+println(four == "Hello World!")

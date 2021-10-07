@@ -368,7 +368,7 @@ CarrotObj *__int_ne(CarrotObj *self, CarrotObj *other) {
 	} else if (strcmp(other->type_str, "float") == 0) {
 		return carrot_bool(self->int_val != other->int_val);
 	}
-	printf("ERROR: Cannot perform \"equal to\" comparison on %s and %s\n", self->type_str, other->type_str);
+	printf("ERROR: Cannot perform \"not equal to\" comparison on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
 
@@ -472,7 +472,7 @@ CarrotObj *__float_ne(CarrotObj *self, CarrotObj *other) {
 	} else if (strcmp(other->type_str, "float") == 0) {
 		return carrot_bool(self->float_val != other->float_val);
 	}
-	printf("ERROR: Cannot perform \"equal to\" comparison on %s and %s\n", self->type_str, other->type_str);
+	printf("ERROR: Cannot perform \"!=\" comparison on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
 
@@ -537,7 +537,7 @@ CarrotObj *__str_ee(CarrotObj *self, CarrotObj *other) {
 		int ee = sdscmp(self->repr, other->repr) == 0;
 		return carrot_bool(ee);
 	}
-	printf("ERROR: Cannot use \"||\" on %s and %s\n", self->type_str, other->type_str);
+	printf("ERROR: Cannot use \"equal to\" on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
 
@@ -546,7 +546,7 @@ CarrotObj *__str_ne(CarrotObj *self, CarrotObj *other) {
 		int ne = sdscmp(self->repr, other->repr) != 0;
 		return carrot_bool(ne);
 	}
-	printf("ERROR: Cannot use \"||\" on %s and %s\n", self->type_str, other->type_str);
+	printf("ERROR: Cannot use \"not equal to\" on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
 

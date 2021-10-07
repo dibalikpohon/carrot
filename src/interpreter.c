@@ -510,6 +510,15 @@ CarrotObj *__bool_or(CarrotObj *self, CarrotObj *other) {
 	exit(1);
 }
 
+CarrotObj *__str_ee(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "str") == 0) {
+		int ee = sdscmp(self->repr, other->repr) == 0;
+		return carrot_bool(ee);
+	}
+	printf("ERROR: Cannot use \"||\" on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
 CarrotObj *carrot_obj_allocate() {
 	CarrotObj *obj = calloc(1, sizeof(CarrotObj));
 
@@ -626,6 +635,7 @@ CarrotObj *carrot_str(char *str_val) {
 	obj->type = CARROT_STR;
 	obj->type_str = sdsnew("str");
 	obj->repr = sdsnew(str_val);
+	obj->__ee = __str_ee;
 	return obj;
 }
 

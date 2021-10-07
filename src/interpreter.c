@@ -66,6 +66,8 @@ CarrotObj *interpreter_visit_binop(Interpreter *context, Node *node) {
 		if (left->__div != NULL) return left->__div(left, right);
 	} else if (strcmp(node->op_str, "==") == 0) {
 		if (left->__ee != NULL) return left->__ee(left, right);
+	} else if (strcmp(node->op_str, "!=") == 0) {
+		if (left->__ne != NULL) return left->__ne(left, right);
 	} else if (strcmp(node->op_str, ">") == 0) {
 		if (left->__gt != NULL) return left->__gt(left, right);
 	} else if (strcmp(node->op_str, "<") == 0) {
@@ -695,4 +697,3 @@ void interpreter_free(Interpreter *interpreter) {
 	}
 	shfree(interpreter->sym_table);
 }
-

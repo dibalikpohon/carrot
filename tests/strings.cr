@@ -13,4 +13,6 @@ println("one and two is not the same? ", one != two)
 -- adding between two strings
 four: str = one + two
 println(four)
+println(one)
+println(two)
 println(four == "Hello World!")

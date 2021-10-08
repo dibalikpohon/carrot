@@ -20,6 +20,7 @@ typedef struct CarrotObj_t {
 	int                 bool_val;
 	int                 int_val;
 	float               float_val;
+	sds                 str_val;
 
 	/* Function call object properties */
 	struct CarrotObj_t  *(*builtin_func)(struct CarrotObj_t **args);
@@ -92,6 +93,7 @@ CarrotObj *interpreter_visit_iter(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_list(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_return(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_statements(Interpreter *context, Node *node);
+CarrotObj *interpreter_visit_unop(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_value(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_var_access(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_var_assign(Interpreter *context, Node *node);

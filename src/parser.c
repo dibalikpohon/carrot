@@ -213,6 +213,18 @@ Node *parser_parse_expression(Parser *parser) {
 }
 
 Node *parser_parse_factor(Parser *parser) {
+	if (parser->current_token.tok_kind == T_MINUS ||
+	    parser->current_token.tok_kind == T_PLUS) {
+		/* Handle unary operator +/- */
+		Node *unop_node = init_node();
+		strcpy(unop_node->op_str, parser->current_token.text);
+
+		parser_consume(parser);
+		unop_node->right = parser_parse_factor(parser);
+		
+		unop_node->type = N_UNOP;
+		return unop_node;
+	}
 	Node *left = parser_parse_power(parser);
 	return left;
 }

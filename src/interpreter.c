@@ -43,6 +43,8 @@ CarrotObj *interpreter_visit(Interpreter *context, Node *node) {
 			return interpreter_visit_iter(context, node);
 		case N_RETURN: 
 			return interpreter_visit_return(context, node);
+		case N_UNOP: 
+			return interpreter_visit_unop(context, node);
 		// TODO: complete missing cases
 		case N_STATEMENT:
 		case N_NULL: 
@@ -241,6 +243,24 @@ CarrotObj *interpreter_visit_statements(Interpreter *context, Node *node) {
 	}
 
 	return carrot_list(list_items);
+}
+
+CarrotObj *interpreter_visit_unop(Interpreter *context, Node *node) {
+	CarrotObj *right = interpreter_visit(context, node->right);
+	if (strcmp(node->op_str, "-") == 0) {
+		if (strcmp(right->type_str, "int") == 0) {
+			return carrot_int(-right->int_val);
+		} else if (strcmp(right->type_str, "float") == 0) {
+			return carrot_float(-right->float_val);
+		} else {
+			printf("ERROR: Cannot perform unary minus on %s\n", right->type_str);
+		}
+	} else if (strcmp(node->op_str, "+") == 0) {
+		return right;
+	} else {
+		printf("ERROR: Cannot perform unary plus on %s\n", right->type_str);
+	}
+	exit(1);
 }
 
 CarrotObj *interpreter_visit_value(Interpreter *context, Node *node) {
@@ -680,6 +700,7 @@ CarrotObj *carrot_float(float float_val) {
 CarrotObj *carrot_str(char *str_val) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_STR;
+	obj->str_val = sdsnew(str_val);
 	obj->type_str = sdsnew("str");
 	obj->repr = sdsnew(str_val);
 	obj->__add = __str_add;

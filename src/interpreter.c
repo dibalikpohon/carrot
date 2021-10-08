@@ -700,6 +700,7 @@ CarrotObj *carrot_float(float float_val) {
 CarrotObj *carrot_str(char *str_val) {
 	CarrotObj *obj = carrot_obj_allocate();
 	obj->type = CARROT_STR;
+	obj->str_val = sdsnew(str_val);
 	obj->type_str = sdsnew("str");
 	obj->repr = sdsnew(str_val);
 	obj->__add = __str_add;

@@ -20,6 +20,7 @@ typedef struct CarrotObj_t {
 	int                 bool_val;
 	int                 int_val;
 	float               float_val;
+	sds                 str_val;
 
 	/* Function call object properties */
 	struct CarrotObj_t  *(*builtin_func)(struct CarrotObj_t **args);

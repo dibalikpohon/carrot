@@ -534,8 +534,8 @@ CarrotObj *__bool_or(CarrotObj *self, CarrotObj *other) {
 
 CarrotObj *__str_add(CarrotObj *self, CarrotObj *other) {
 	if (strcmp(other->type_str, "str") == 0) {
-		sds dup = sdsdup(self->repr);
-		sds cat = sdscatsds(dup, other->repr); // dup + other->repr; dup IS INVALIDATED AND SHOULD NOT BE USED
+		sds dup = sdsdup(self->str_val);
+		sds cat = sdscatsds(dup, other->str_val); // dup + other->str_val; dup IS INVALIDATED AND SHOULD NOT BE USED
 		
 		CarrotObj* carrot_obj = carrot_str(cat);
 		sdsfree(cat);		// free the cat
@@ -548,7 +548,7 @@ CarrotObj *__str_add(CarrotObj *self, CarrotObj *other) {
 
 CarrotObj *__str_ee(CarrotObj *self, CarrotObj *other) {
 	if (strcmp(other->type_str, "str") == 0) {
-		int ee = sdscmp(self->repr, other->repr) == 0;
+		int ee = sdscmp(self->str_val, other->str_val) == 0;
 		return carrot_bool(ee);
 	}
 	printf("ERROR: Cannot use \"equal to\" on %s and %s\n", self->type_str, other->type_str);
@@ -557,7 +557,7 @@ CarrotObj *__str_ee(CarrotObj *self, CarrotObj *other) {
 
 CarrotObj *__str_ne(CarrotObj *self, CarrotObj *other) {
 	if (strcmp(other->type_str, "str") == 0) {
-		int ne = sdscmp(self->repr, other->repr) != 0;
+		int ne = sdscmp(self->str_val, other->str_val) != 0;
 		return carrot_bool(ne);
 	}
 	printf("ERROR: Cannot use \"not equal to\" on %s and %s\n", self->type_str, other->type_str);

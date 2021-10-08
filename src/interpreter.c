@@ -25,6 +25,8 @@ CarrotObj *interpreter_visit(Interpreter *context, Node *node) {
 			return interpreter_visit_block(context, node);
 		case N_FUNC_CALL:
 			return interpreter_visit_func_call(context, node);
+		case N_GET_ITEM:
+			return interpreter_visit_get_item(context, node);
 		case N_IF:
 			return interpreter_visit_if(context, node);
 		case N_STATEMENTS:
@@ -183,6 +185,22 @@ CarrotObj *interpreter_visit_func_def(Interpreter *context, Node *node) {
 	}
 	shput(context->sym_table, node->func_name, function);
 	return carrot_null();
+}
+
+CarrotObj *interpreter_visit_get_item(Interpreter *context, Node *node) {
+	CarrotObj *the_list = carrot_get_var(node->var_name, context);
+	CarrotObj *the_index = interpreter_visit(context, node->index_node);
+	if (strcmp(the_list->type_str, "list") != 0) {
+		printf("ERROR: %s cannot be indexed\n", the_list->type_str);
+		exit(1);
+	}
+	if (strcmp(the_index->type_str, "int") != 0) {
+		printf("ERROR: Cannot index with type %s\n", the_list->type_str);
+		exit(1);
+	}
+
+	return the_list->list_items[the_index->int_val];
+	exit(1);
 }
 
 CarrotObj *interpreter_visit_if(Interpreter *context, Node *node) {

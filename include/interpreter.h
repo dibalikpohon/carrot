@@ -88,6 +88,7 @@ CarrotObj *interpreter_visit_binop(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_block(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_func_call(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_func_def(Interpreter *context, Node *node);
+CarrotObj *interpreter_visit_get_item(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_if(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_iter(Interpreter *context, Node *node);
 CarrotObj *interpreter_visit_list(Interpreter *context, Node *node);

@@ -76,6 +76,10 @@ typedef struct Node_t {
 	struct Node_t      **func_params;
 	struct Node_t      **func_statements;
 
+	/* item access node */
+	struct Node_t      *list_node;
+	struct Node_t      *index_node;
+
 	/* if node */
 	struct Node_t      **conditions;
 	//                 The if_blocks[i] will be executed if

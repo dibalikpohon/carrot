@@ -50,6 +50,8 @@ typedef struct CarrotObj_t {
 	                              struct CarrotObj_t *other);
 	struct CarrotObj_t  *(*__ee)(struct CarrotObj_t *self,
 	                             struct CarrotObj_t *other);
+	struct CarrotObj_t  *(*__ne)(struct CarrotObj_t *self,
+	                             struct CarrotObj_t *other);
 	struct CarrotObj_t  *(*__ge)(struct CarrotObj_t *self,
 	                             struct CarrotObj_t *other);
 	struct CarrotObj_t  *(*__le)(struct CarrotObj_t *self,

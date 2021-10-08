@@ -68,6 +68,8 @@ CarrotObj *interpreter_visit_binop(Interpreter *context, Node *node) {
 		if (left->__div != NULL) return left->__div(left, right);
 	} else if (strcmp(node->op_str, "==") == 0) {
 		if (left->__ee != NULL) return left->__ee(left, right);
+	} else if (strcmp(node->op_str, "!=") == 0) {
+		if (left->__ne != NULL) return left->__ne(left, right);
 	} else if (strcmp(node->op_str, ">") == 0) {
 		if (left->__gt != NULL) return left->__gt(left, right);
 	} else if (strcmp(node->op_str, "<") == 0) {
@@ -380,6 +382,16 @@ CarrotObj *__int_ee(CarrotObj *self, CarrotObj *other) {
 	exit(1);
 }
 
+CarrotObj *__int_ne(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->int_val != other->int_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->int_val != other->float_val);
+	}
+	printf("ERROR: Cannot perform \"not equal to\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
 CarrotObj *__int_gt(CarrotObj *self, CarrotObj *other) {
 	if (strcmp(other->type_str, "int") == 0) {
 		return carrot_bool(self->int_val > other->int_val);
@@ -474,6 +486,16 @@ CarrotObj *__float_ee(CarrotObj *self, CarrotObj *other) {
 	exit(1);
 }
 
+CarrotObj *__float_ne(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "int") == 0) {
+		return carrot_bool(self->float_val != other->float_val);
+	} else if (strcmp(other->type_str, "float") == 0) {
+		return carrot_bool(self->float_val != other->float_val);
+	}
+	printf("ERROR: Cannot perform \"!=\" comparison on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
 CarrotObj *__float_gt(CarrotObj *self, CarrotObj *other) {
 	if (strcmp(other->type_str, "int") == 0) {
 		return carrot_bool(self->float_val > other->int_val);
@@ -527,6 +549,38 @@ CarrotObj *__bool_or(CarrotObj *self, CarrotObj *other) {
 		return carrot_bool(self->bool_val || other->bool_val);
 	} 
 	printf("ERROR: Cannot use \"||\" on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__str_add(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "str") == 0) {
+		sds dup = sdsdup(self->str_val);
+		sds cat = sdscatsds(dup, other->str_val); // dup + other->str_val; dup IS INVALIDATED AND SHOULD NOT BE USED
+		
+		CarrotObj* carrot_obj = carrot_str(cat);
+		sdsfree(cat);		// free the cat
+		
+		return carrot_obj;
+	}
+	printf("ERROR: Cannot perform addition on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__str_ee(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "str") == 0) {
+		int ee = sdscmp(self->str_val, other->str_val) == 0;
+		return carrot_bool(ee);
+	}
+	printf("ERROR: Cannot use \"equal to\" on %s and %s\n", self->type_str, other->type_str);
+	exit(1);
+}
+
+CarrotObj *__str_ne(CarrotObj *self, CarrotObj *other) {
+	if (strcmp(other->type_str, "str") == 0) {
+		int ne = sdscmp(self->str_val, other->str_val) != 0;
+		return carrot_bool(ne);
+	}
+	printf("ERROR: Cannot use \"not equal to\" on %s and %s\n", self->type_str, other->type_str);
 	exit(1);
 }
 
@@ -593,6 +647,7 @@ CarrotObj *carrot_int(int int_val) {
 	obj->__mult = __int_mult;
 	obj->__div = __int_div;
 	obj->__ee = __int_ee;
+	obj->__ne = __int_ne;
 	obj->__ge = __int_ge;
 	obj->__le = __int_le;
 	obj->__gt = __int_gt;
@@ -634,6 +689,7 @@ CarrotObj *carrot_float(float float_val) {
 	obj->__mult = __float_mult;
 	obj->__div = __float_div;
 	obj->__ee = __float_ee;
+	obj->__ne = __float_ne;
 	obj->__ge = __float_ge;
 	obj->__le = __float_le;
 	obj->__gt = __float_gt;
@@ -646,6 +702,9 @@ CarrotObj *carrot_str(char *str_val) {
 	obj->type = CARROT_STR;
 	obj->type_str = sdsnew("str");
 	obj->repr = sdsnew(str_val);
+	obj->__add = __str_add;
+	obj->__ee = __str_ee;
+	obj->__ne = __str_ne;
 	return obj;
 }
 
@@ -705,4 +764,3 @@ void interpreter_free(Interpreter *interpreter) {
 	}
 	shfree(interpreter->sym_table);
 }
-

@@ -366,7 +366,7 @@ CarrotObj *__int_ne(CarrotObj *self, CarrotObj *other) {
 	if (strcmp(other->type_str, "int") == 0) {
 		return carrot_bool(self->int_val != other->int_val);
 	} else if (strcmp(other->type_str, "float") == 0) {
-		return carrot_bool(self->int_val != other->int_val);
+		return carrot_bool(self->int_val != other->float_val);
 	}
 	printf("ERROR: Cannot perform \"not equal to\" comparison on %s and %s\n", self->type_str, other->type_str);
 	exit(1);

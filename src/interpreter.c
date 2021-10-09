@@ -54,6 +54,7 @@ CarrotObj *interpreter_visit(Interpreter *context, Node *node) {
 			break;
 	}
 	printf("%s\n", "ERROR: Unknown node");
+	printf("%d\n", node->type);
 	exit(1);
 }
 
@@ -99,17 +100,7 @@ CarrotObj *interpreter_visit_block(Interpreter *context, Node *node) {
 }
 
 CarrotObj *interpreter_visit_func_call(Interpreter *context, Node *node) {
-	char *func_name = node->func_name;
-	CarrotObj *func_to_call = carrot_get_var(func_name, context);
-	if (func_to_call == NULL) {
-		char msg[255];
-		sprintf(msg,
-		        "Function \"%s\" is undefined. "
-			"Make sure you define the function before calling it.",
-			func_name);
-		carrot_log_error(msg, "idklol", -1);
-		exit(1);
-	}
+	CarrotObj *func_to_call = interpreter_visit(context, node->callee);
 
 	if (func_to_call->is_builtin) {
 		/* Case 1: the function being called is a builtin function */
@@ -188,7 +179,7 @@ CarrotObj *interpreter_visit_func_def(Interpreter *context, Node *node) {
 }
 
 CarrotObj *interpreter_visit_get_item(Interpreter *context, Node *node) {
-	CarrotObj *the_list = carrot_get_var(node->var_name, context);
+	CarrotObj *the_list = interpreter_visit(context, node->list_node);
 	CarrotObj *the_index = interpreter_visit(context, node->index_node);
 	if (strcmp(the_list->type_str, "list") != 0) {
 		printf("ERROR: %s cannot be indexed\n", the_list->type_str);

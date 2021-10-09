@@ -158,7 +158,53 @@ Node *parser_parse_atom(Parser *parser) {
 Node *parser_parse_call(Parser *parser) {
 	Node *atom = parser_parse_atom(parser);
 	if (parser->current_token.tok_kind == T_LPAREN) {
-	}
+		/* Handle function call */
+		parser_consume(parser);
+		Node **args = NULL;
+
+		if (parser->current_token.tok_kind == T_RPAREN) {
+			// handle call without args
+			parser_consume(parser);
+		} else {
+			// handle call with args
+			Node *arg = parser_parse_expression(parser);
+			arrput(args, arg);
+			while (parser->current_token.tok_kind == T_COMMA) {
+				parser_consume(parser);
+				Node *arg = parser_parse_expression(parser);
+				arrput(args, arg);
+			}
+			if (parser->current_token.tok_kind != T_RPAREN) {
+				printf("ERROR: \")\" expected.\n");
+				exit(1);
+			}
+			
+			// consume R_PAREN
+			parser_consume(parser);
+		}
+
+		Node *obj = init_node();
+		obj->type = N_FUNC_CALL;
+		obj->func_args = args;
+		obj->callee = atom;
+		return obj;
+	} else if (parser->current_token.tok_kind == T_LBRACKET) {
+		/* Handle item access */
+		parser_consume(parser);
+		Node *index_node = parser_parse_expression(parser);
+		//parser_consume(parser);
+		if (parser->current_token.tok_kind != T_RBRACKET) {
+			printf("ERROR: \"]\" expected.\n");
+			exit(1);
+		}
+		parser_consume(parser);
+		Node *get_item_node = init_node();
+		get_item_node->type = N_GET_ITEM;
+		get_item_node->list_node = atom;
+		get_item_node->index_node = index_node;
+		return get_item_node;
+
+	} else 
 	return atom;
 }
 
@@ -344,58 +390,7 @@ Node *parser_parse_identifier(Parser *parser) {
 	Token id_token = parser_consume(parser);
 	Token next_token = parser->current_token; //parser_consume(parser);
 
-	if (next_token.tok_kind == T_LPAREN) {
-		parser_consume(parser);
-		// TODO: should be expression
-		/* Handle function call */
-		Node **args = NULL;
-
-		if (parser->current_token.tok_kind == T_RPAREN) {
-			// handle call without args
-			parser_consume(parser);
-		} else {
-			// handle call with args
-			Node *arg = parser_parse_expression(parser);
-			arrput(args, arg);
-			while (parser->current_token.tok_kind == T_COMMA) {
-				parser_consume(parser);
-				Node *arg = parser_parse_expression(parser);
-				arrput(args, arg);
-			}
-			if (parser->current_token.tok_kind != T_RPAREN) {
-				printf("ERROR: \")\" expected.\n");
-				exit(1);
-			}
-			
-			// consume R_PAREN
-			parser_consume(parser);
-		}
-
-		Node *obj = init_node();
-		obj->type = N_FUNC_CALL;
-		obj->func_args = args;
-		strcpy(obj->func_name, id_token.text);
-		return obj;
-	} else if (next_token.tok_kind == T_LBRACKET) {
-		// TODO: should be expression
-		parser_consume(parser);
-		/* Handle item access */
-		//Node *list_node = parser_parse_expression(parser);
-		Node *index_node = parser_parse_expression(parser);
-		//parser_consume(parser);
-		if (parser->current_token.tok_kind != T_RBRACKET) {
-			printf("ERROR: \"]\" expected.\n");
-			exit(1);
-		}
-		parser_consume(parser);
-		Node *get_item_node = init_node();
-		get_item_node->type = N_GET_ITEM;
-		// get_item_node->list_node = list_node;
-		get_item_node->index_node = index_node;
-		strcpy(get_item_node->var_name, id_token.text);
-		return get_item_node;
-
-	} else if (next_token.tok_kind == T_EQUAL) {
+	if (next_token.tok_kind == T_EQUAL) {
 		/* Handle assignment */
 		parser_consume(parser);
 		Node *var_assign = init_node();

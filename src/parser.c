@@ -208,9 +208,18 @@ Node *parser_parse_call(Parser *parser) {
 	return atom;
 }
 
-Node *parser_parse_com(Parser *parser) {
+Node *parser_parse_comp(Parser *parser) {
 	// 1) parse NOT
-	// ...
+	if (parser->current_token.tok_kind == T_NOT) {
+		Node *unop_node = init_node();
+		strcpy(unop_node->op_str, parser->current_token.text);
+
+		parser_consume(parser);
+		unop_node->right = parser_parse_comp(parser);
+		
+		unop_node->type = N_UNOP;
+		return unop_node;
+	}
 
 	// left term
 	Node *left = parser_parse_arith(parser);
@@ -238,7 +247,7 @@ Node *parser_parse_com(Parser *parser) {
 }
 
 Node *parser_parse_expression(Parser *parser) {
-	Node *left = parser_parse_com(parser);
+	Node *left = parser_parse_comp(parser);
 
 	/* and, or, ... */
 	while (parser->current_token.tok_kind == T_AND ||
@@ -247,7 +256,7 @@ Node *parser_parse_expression(Parser *parser) {
 		strcpy(binop_node->op_str, parser->current_token.text);
 
 		parser_consume(parser);
-		Node *right = parser_parse_com(parser);
+		Node *right = parser_parse_comp(parser);
 
 		binop_node->type = N_BINOP;
 		binop_node->left = left;

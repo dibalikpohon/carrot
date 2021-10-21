@@ -19,3 +19,8 @@ println((1==1) || (2<3)) -- true
 println((1==0) || (5<3)) -- false
 println((1==0) || (1<3)) -- true
 println((1==0) && (1<3)) -- false
+
+println()
+println("negation")
+println(!1)
+println(!false)

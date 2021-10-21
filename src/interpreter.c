@@ -256,19 +256,22 @@ CarrotObj *interpreter_visit_statements(Interpreter *context, Node *node) {
 
 CarrotObj *interpreter_visit_unop(Interpreter *context, Node *node) {
 	CarrotObj *right = interpreter_visit(context, node->right);
-	if (strcmp(node->op_str, "-") == 0) {
+
+	if (strcmp(node->op_str, "!") == 0) {
+		if (strcmp(right->type_str, "bool") == 0) {
+			return carrot_bool(!right->bool_val);
+		}
+	} else if (strcmp(node->op_str, "-") == 0) {
 		if (strcmp(right->type_str, "int") == 0) {
 			return carrot_int(-right->int_val);
 		} else if (strcmp(right->type_str, "float") == 0) {
 			return carrot_float(-right->float_val);
-		} else {
-			printf("ERROR: Cannot perform unary minus on %s\n", right->type_str);
 		}
 	} else if (strcmp(node->op_str, "+") == 0) {
 		return right;
-	} else {
-		printf("ERROR: Cannot perform unary plus on %s\n", right->type_str);
-	}
+	} 
+
+	printf("ERROR: Cannot perform unary %s on %s\n", node->op_str, right->type_str);
 	exit(1);
 }
 
@@ -751,6 +754,7 @@ void carrot_free(CarrotObj *root) {
 	free(root->hash);
 	sdsfree(root->repr);
 	sdsfree(root->type_str);
+	sdsfree(root->str_val);
 	free(root);
 }
 
